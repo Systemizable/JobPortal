@@ -326,11 +326,19 @@
 
                 showMessage('Sign in successful! Redirecting...', 'success');
 
-                // Redirect after 1.5 seconds
+                // Redirect based on role
                 setTimeout(() => {
-                    // For now, just refresh to demonstrate
-                    // Later, you can redirect to dashboard: window.location.href = 'dashboard.html';
-                    window.location.reload();
+                    if (data.roles.includes('ROLE_RECRUITER')) {
+                        window.location.href = 'recruiter-dashboard.html';
+                    } else if (data.roles.includes('ROLE_CANDIDATE')) {
+                        window.location.href = 'candidate-dashboard.html';
+                    } else if (data.roles.includes('ROLE_ADMIN')) {
+                        // You can create an admin dashboard later
+                        window.location.href = 'admin-dashboard.html';
+                    } else {
+                        // Default redirect
+                        window.location.href = 'candidate-dashboard.html';
+                    }
                 }, 1500);
             } else {
                 showMessage(data.message || 'Sign in failed. Please check your credentials.', 'error');
@@ -395,10 +403,17 @@
     // Check if user is already logged in
     window.addEventListener('load', () => {
         const token = localStorage.getItem('token');
-        if (token) {
-            // User is already logged in, you can redirect to dashboard
-            // For now, just show a message
-            showMessage('You are already logged in!', 'success');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        if (token && user.roles) {
+            // Redirect to appropriate dashboard
+            if (user.roles.includes('ROLE_RECRUITER')) {
+                window.location.href = 'recruiter-dashboard.html';
+            } else if (user.roles.includes('ROLE_CANDIDATE')) {
+                window.location.href = 'candidate-dashboard.html';
+            } else if (user.roles.includes('ROLE_ADMIN')) {
+                window.location.href = 'admin-dashboard.html';
+            }
         }
     });
 </script>

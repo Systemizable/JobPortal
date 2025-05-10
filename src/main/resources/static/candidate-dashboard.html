@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Dashboard - Job Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #5a67d8;
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e0;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .job-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background-color: white;
+        }
+
+        .job-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+
+        .job-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .job-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .job-company {
+            color: #718096;
+            margin-bottom: 10px;
+        }
+
+        .job-details {
+            display: flex;
+            gap: 20px;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .job-description {
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-applied {
+            background-color: #bee3f8;
+            color: #2b6cb0;
+        }
+
+        .status-reviewing {
+            background-color: #fef3c7;
+            color: #d69e2e;
+        }
+
+        .status-shortlisted {
+            background-color: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .status-rejected {
+            background-color: #fed7d7;
+            color: #c53030;
+        }
+
+        .status-accepted {
+            background-color: #68d391;
+            color: #22543d;
+        }
+
+        .profile-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .skills-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .skill-tag {
+            background-color: #edf2f7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .remove-skill {
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 500px;
+            width: 90%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        @media (max-width: 768px) {
+            .job-details {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .dashboard-tabs {
+                flex-wrap: wrap;
+            }
+
+            .search-bar {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <nav class="nav">
+        <div class="logo">Job Portal</div>
+        <div class="user-info">
+            <span id="username">Loading...</span>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+</header>
+
+<main class="main-container">
+    <div class="dashboard-tabs">
+        <div class="tab active" onclick="switchTab('browse')" id="browse-tab">Browse Jobs</div>
+        <div class="tab" onclick="switchTab('applications')" id="applications-tab">My Applications</div>
+        <div class="tab" onclick="switchTab('profile')" id="profile-tab">Profile</div>
+        <div class="tab" onclick="switchTab('statistics')" id="statistics-tab">Statistics</div>
+    </div>
+
+    <!-- Browse Jobs Tab -->
+    <div class="tab-content active" id="browse-content">
+        <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search jobs..." id="job-search">
+            <button class="btn btn-primary" onclick="searchJobs()">Search</button>
+        </div>
+
+        <div class="job-filters">
+            <select class="filter-select" id="category-filter">
+                <option value="">All Categories</option>
+                <option value="IT">IT</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+                <option value="HR">HR</option>
+            </select>
+            <select class="filter-select" id="type-filter">
+                <option value="">All Types</option>
+                <option value="FULL_TIME">Full Time</option>
+                <option value="PART_TIME">Part Time</option>
+                <option value="CONTRACT">Contract</option>
+                <option value="INTERNSHIP">Internship</option>
+            </select>
+            <select class="filter-select" id="location-filter">
+                <option value="">All Locations</option>
+                <option value="Beirut">Beirut</option>
+                <option value="Tripoli">Tripoli</option>
+                <option value="Saida">Saida</option>
+            </select>
+        </div>
+
+        <div id="jobs-list">
+            <!-- Jobs will be populated here -->
+        </div>
+    </div>
+
+    <!-- My Applications Tab -->
+    <div class="tab-content" id="applications-content">
+        <h2>My Applications</h2>
+        <div id="applications-list">
+            <!-- Applications will be populated here -->
+        </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="tab-content" id="profile-content">
+        <h2>My Profile</h2>
+        <form class="profile-form" id="profile-form">
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+                <input type="text" id="firstName" required>
+            </div>
+            <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <input type="text" id="lastName" required>
+            </div>
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input type="tel" id="phoneNumber">
+            </div>
+            <div class="form-group">
+                <label for="location">Location</label>
+                <input type="text" id="location">
+            </div>
+            <div class="form-group">
+                <label for="currentTitle">Current Title</label>
+                <input type="text" id="currentTitle">
+            </div>
+            <div class="form-group">
+                <label for="experienceLevel">Experience Level</label>
+                <select id="experienceLevel">
+                    <option value="ENTRY">Entry Level</option>
+                    <option value="JUNIOR">Junior</option>
+                    <option value="MID">Mid Level</option>
+                    <option value="SENIOR">Senior</option>
+                    <option value="EXECUTIVE">Executive</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yearsOfExperience">Years of Experience</label>
+                <input type="number" id="yearsOfExperience" min="0">
+            </div>
+            <div class="form-group">
+                <label>Skills</label>
+                <div class="skills-input">
+                    <input type="text" id="skill-input" placeholder="Add skill...">
+                    <button type="button" class="btn btn-primary" onclick="addSkill()">Add</button>
+                </div>
+                <div id="skills-list"></div>
+            </div>
+            <div class="form-group">
+                <label for="resumeUrl">Resume URL</label>
+                <input type="url" id="resumeUrl">
+            </div>
+            <div class="form-group">
+                <label for="profileSummary">Profile Summary</label>
+                <textarea id="profileSummary"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="linkedInUrl">LinkedIn URL</label>
+                <input type="url" id="linkedInUrl">
+            </div>
+            <div class="form-group">
+                <label for="portfolioUrl">Portfolio URL</label>
+                <input type="url" id="portfolioUrl">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+        </form>
+    </div>
+
+    <!-- Statistics Tab -->
+    <div class="tab-content" id="statistics-content">
+        <h2>Application Statistics</h2>
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="total-apps">0</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="applied-apps">0</div>
+                <div class="stat-label">Applied</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="reviewing-apps">0</div>
+                <div class="stat-label">Under Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="shortlisted-apps">0</div>
+                <div class="stat-label">Shortlisted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="accepted-apps">0</div>
+                <div class="stat-label">Accepted</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Job Application Modal -->
+<div class="modal" id="apply-modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('apply-modal')">&times;</span>
+        <h2>Apply for Job</h2>
+        <form id="apply-form">
+            <input type="hidden" id="apply-job-id">
+            <div class="form-group">
+                <label for="cover-letter">Cover Letter</label>
+                <textarea id="cover-letter" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="apply-resume-url">Resume URL (optional)</label>
+                <input type="url" id="apply-resume-url">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Application</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // API Configuration
+    const API_URL = 'https://josephsfeirjobportal.onrender.com/api';
+    let currentUser = JSON.parse(localStorage.getItem('user'));
+    let authToken = localStorage.getItem('token');
+    let skills = [];
+
+    // Check if user is logged in and is a candidate
+    if (!currentUser || !authToken || !currentUser.roles.includes('ROLE_CANDIDATE')) {
+        window.location.href = 'index.html';
+    }
+
+    // Display username
+    document.getElementById('username').textContent = currentUser.username;
+
+    // Tab switching
+    function switchTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+        document.getElementById(`${tab}-tab`).classList.add('active');
+        document.getElementById(`${tab}-content`).classList.add('active');
+
+        // Load content for the tab
+        if (tab === 'browse') {
+            loadJobs();
+        } else if (tab === 'applications') {
+            loadApplications();
+        } else if (tab === 'profile') {
+            loadProfile();
+        } else if (tab === 'statistics') {
+            loadStatistics();
+        }
+    }
+
+    // Load jobs
+    async function loadJobs() {
+        try {
+            const response = await fetch(`${API_URL}/jobs`);
+            const data = await response.json();
+            displayJobs(data.jobs);
+        } catch (error) {
+            console.error('Error loading jobs:', error);
+        }
+    }
+
+    // Display jobs
+    function displayJobs(jobs) {
+        const jobsList = document.getElementById('jobs-list');
+        jobsList.innerHTML = '';
+
+        jobs.forEach(job => {
+            const jobCard = document.createElement('div');
+            jobCard.className = 'job-card';
+            jobCard.innerHTML = `
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">${job.title}</div>
+                            <div class="job-company">${job.companyName}</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="openApplyModal('${job.id}')">Apply</button>
+                    </div>
+                    <div class="job-details">
+                        <span>📍 ${job.location}</span>
+                        <span>💼 ${job.employmentType.replace('_', ' ')}</span>
+                        <span>📂 ${job.category}</span>
+                        ${job.salary ? `<span>💰 $${job.salary}</span>` : ''}
+                    </div>
+                    <div class="job-description">${job.description}</div>
+                `;
+            jobsList.appendChild(jobCard);
+        });
+    }
+
+    // Search jobs
+    async function searchJobs() {
+        const keyword = document.getElementById('job-search').value;
+        const category = document.getElementById('category-filter').value;
+        const type = document.getElementById('type-filter').value;
+        const location = document.getElementById('location-filter').value;
+
+        try {
+            let url = `${API_URL}/jobs`;
+            if (keyword) {
+                url = `${API_URL}/jobs/search?keyword=${encodeURIComponent(keyword)}`;
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+            let jobs = data.jobs;
+
+            // Apply filters
+            if (category) {
+                jobs = jobs.filter(job => job.category === category);
+            }
+            if (type) {
+                jobs = jobs.filter(job => job.employmentType === type);
+            }
+            if (location) {
+                jobs = jobs.filter(job => job.location === location);
+            }
+
+            displayJobs(jobs);
+        } catch (error) {
+            console.error('Error searching jobs:', error);
+        }
+    }
+
+    // Open apply modal
+    function openApplyModal(jobId) {
+        document.getElementById('apply-job-id').value = jobId;
+        document.getElementById('apply-modal').style.display = 'block';
+    }
+
+    // Close modal
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Submit application
+    document.getElementById('apply-form').onsubmit = async function(e) {
+        e.preventDefault();
+
+        const jobId = document.getElementById('apply-job-id').value;
+        const coverLetter = document.getElementById('cover-letter').value;
+        const resumeUrl = document.getElementById('apply-resume-url').value;
+
+        try {
+            // First get candidate ID
+            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!candidateResponse.ok) {
+                alert('Please create your candidate profile first!');
+                switchTab('profile');
+                return;
+            }
+
+            const candidateData = await candidateResponse.json();
+
+            const applicationData = {
+                jobId: jobId,
+                candidateId: candidateData.id,
+                coverLetter: coverLetter,
+                resumeUrl: resumeUrl
+            };
+
+            const response = await fetch(`${API_URL}/applications`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify(applicationData)
+            });
+
+            if (response.ok) {
+                alert('Application submitted successfully!');
+                closeModal('apply-modal');
+                switchTab('applications');
+            } else {
+                const error = await response.json();
+                alert(error.message || 'Failed to submit application');
+            }
+        } catch (error) {
+            console.error('Error submitting application:', error);
+            alert('Error submitting application');
+        }
+    };
+
+    // Load applications
+    async function loadApplications() {
+        try {
+            // First get candidate ID
+            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!candidateResponse.ok) {
+                document.getElementById('applications-list').innerHTML =
+                    '<p>Please create your candidate profile first!</p>';
+                return;
+            }
+
+            const candidateData = await candidateResponse.json();
+
+            const response = await fetch(`${API_URL}/applications/candidate/${candidateData.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            const data = await response.json();
+            displayApplications(data.applications);
+        } catch (error) {
+            console.error('Error loading applications:', error);
+        }
+    }
+
+    // Display applications
+    function displayApplications(applications) {
+        const applicationsList = document.getElementById('applications-list');
+        applicationsList.innerHTML = '';
+
+        if (!applications || applications.length === 0) {
+            applicationsList.innerHTML = '<p>You haven\'t applied to any jobs yet.</p>';
+            return;
+        }
+
+        applications.forEach(app => {
+            const appCard = document.createElement('div');
+            appCard.className = 'job-card';
+            appCard.innerHTML = `
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">Job ID: ${app.jobId}</div>
+                            <div class="job-company">Applied on: ${new Date(app.applicationDate).toLocaleDateString()}</div>
+                        </div>
+                        <span class="status-badge status-${app.status.toLowerCase()}">${app.status}</span>
+                    </div>
+                    <div class="job-description">${app.coverLetter}</div>
+                    ${app.reviewNotes ? `<div style="margin-top: 10px;"><strong>Review Notes:</strong> ${app.reviewNotes}</div>` : ''}
+                `;
+            applicationsList.appendChild(appCard);
+        });
+    }
+
+    // Load profile
+    async function loadProfile() {
+        try {
+            const response = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (response.ok) {
+                const candidate = await response.json();
+                fillProfileForm(candidate);
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+        }
+    }
+
+    // Fill profile form
+    function fillProfileForm(candidate) {
+        document.getElementById('firstName').value = candidate.firstName || '';
+        document.getElementById('lastName').value = candidate.lastName || '';
+        document.getElementById('phoneNumber').value = candidate.phoneNumber || '';
+        document.getElementById('location').value = candidate.location || '';
+        document.getElementById('currentTitle').value = candidate.currentTitle || '';
+        document.getElementById('experienceLevel').value = candidate.experienceLevel || 'ENTRY';
+        document.getElementById('yearsOfExperience').value = candidate.yearsOfExperience || '';
+        document.getElementById('resumeUrl').value = candidate.resumeUrl || '';
+        document.getElementById('profileSummary').value = candidate.profileSummary || '';
+        document.getElementById('linkedInUrl').value = candidate.linkedInUrl || '';
+        document.getElementById('portfolioUrl').value = candidate.portfolioUrl || '';
+
+        skills = candidate.skills || [];
+        displaySkills();
+    }
+
+    // Add skill
+    function addSkill() {
+        const skillInput = document.getElementById('skill-input');
+        const skill = skillInput.value.trim();
+
+        if (skill && !skills.includes(skill)) {
+            skills.push(skill);
+            displaySkills();
+            skillInput.value = '';
+        }
+    }
+
+    // Display skills
+    function displaySkills() {
+        const skillsList = document.getElementById('skills-list');
+        skillsList.innerHTML = '';
+
+        skills.forEach(skill => {
+            const skillTag = document.createElement('div');
+            skillTag.className = 'skill-tag';
+            skillTag.innerHTML = `
+                    ${skill}
+                    <span class="remove-skill" onclick="removeSkill('${skill}')">&times;</span>
+                `;
+            skillsList.appendChild(skillTag);
+        });
+    }
+
+    // Remove skill
+    function removeSkill(skill) {
+        skills = skills.filter(s => s !== skill);
+        displaySkills();
+    }
+
+    // Submit profile form
+    document.getElementById('profile-form').onsubmit = async function(e) {
+        e.preventDefault();
+
+        const profileData = {
+            userId: currentUser.id,
+            firstName: document.getElementById('firstName').value,
+            lastName: document.getElementById('lastName').value,
+            phoneNumber: document.getElementById('phoneNumber').value,
+            location: document.getElementById('location').value,
+            currentTitle: document.getElementById('currentTitle').value,
+            experienceLevel: document.getElementById('experienceLevel').value,
+            yearsOfExperience: parseInt(document.getElementById('yearsOfExperience').value) || 0,
+            skills: skills,
+            resumeUrl: document.getElementById('resumeUrl').value,
+            profileSummary: document.getElementById('profileSummary').value,
+            linkedInUrl: document.getElementById('linkedInUrl').value,
+            portfolioUrl: document.getElementById('portfolioUrl').value
+        };
+
+        try {
+            // Check if profile exists
+            const checkResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            let method, url;
+            if (checkResponse.ok) {
+                // Update existing profile
+                const candidate = await checkResponse.json();
+                method = 'PUT';
+                url = `${API_URL}/candidates/${candidate.id}`;
+            } else {
+                // Create new profile
+                method = 'POST';
+                url = `${API_URL}/candidates`;
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify(profileData)
+            });
+
+            if (response.ok) {
+                alert('Profile saved successfully!');
+            } else {
+                throw new Error('Failed to save profile');
+            }
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            alert('Error saving profile');
+        }
+    };
+
+    // Load statistics
+    async function loadStatistics() {
+        try {
+            // First get candidate ID
+            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!candidateResponse.ok) {
+                return;
+            }
+
+            const candidateData = await candidateResponse.json();
+
+            const response = await fetch(`${API_URL}/candidates/${candidateData.id}/stats`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (response.ok) {
+                const stats = await response.json();
+                document.getElementById('total-apps').textContent = stats.totalApplications || 0;
+                document.getElementById('applied-apps').textContent = stats.appliedApplications || 0;
+                document.getElementById('reviewing-apps').textContent = stats.reviewingApplications || 0;
+                document.getElementById('shortlisted-apps').textContent = stats.shortlistedApplications || 0;
+                document.getElementById('accepted-apps').textContent = stats.acceptedApplications || 0;
+            }
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+        }
+    }
+
+    // Logout
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+    }
+
+    // Initial load
+    loadJobs();
+</script>
+</body>
+</html>
