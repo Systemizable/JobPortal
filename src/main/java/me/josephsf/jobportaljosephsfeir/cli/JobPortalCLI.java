@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-@Component
 public class JobPortalCLI implements CommandLineRunner {
 
     private final RestTemplate restTemplate;
