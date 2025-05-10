@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Portal - Login/Register</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .switch-form {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .switch-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .switch-form a:hover {
+            text-decoration: underline;
+        }
+
+        .message {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">
+        <h1>Job Portal</h1>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <!-- Sign In Form -->
+    <div id="signin-form" class="auth-form active">
+        <div class="form-header">
+            <h2>Welcome Back</h2>
+            <p>Sign in to your account</p>
+        </div>
+
+        <form id="signin">
+            <div class="form-group">
+                <label for="signin-username">Username</label>
+                <input type="text" id="signin-username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" required>
+            </div>
+
+            <button type="submit" class="btn">
+                <span id="signin-btn-text">Sign In</span>
+            </button>
+        </form>
+
+        <div class="switch-form">
+            Don't have an account? <a href="#" onclick="showSignUp()">Sign Up</a>
+        </div>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="signup-form" class="auth-form">
+        <div class="form-header">
+            <h2>Create Account</h2>
+            <p>Join Job Portal today</p>
+        </div>
+
+        <form id="signup">
+            <div class="form-group">
+                <label for="signup-username">Username</label>
+                <input type="text" id="signup-username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-role">Account Type</label>
+                <select id="signup-role" required>
+                    <option value="candidate">Job Seeker</option>
+                    <option value="recruiter">Recruiter</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn">
+                <span id="signup-btn-text">Sign Up</span>
+            </button>
+        </form>
+
+        <div class="switch-form">
+            Already have an account? <a href="#" onclick="showSignIn()">Sign In</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Replace with your actual Render service URL
+    const API_URL = 'https://your-service-name.onrender.com/api/auth';
+
+    // Form switching functions
+    function showSignIn() {
+        document.getElementById('signin-form').classList.add('active');
+        document.getElementById('signup-form').classList.remove('active');
+        hideMessage();
+    }
+
+    function showSignUp() {
+        document.getElementById('signup-form').classList.add('active');
+        document.getElementById('signin-form').classList.remove('active');
+        hideMessage();
+    }
+
+    // Message functions
+    function showMessage(text, type) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+    }
+
+    function hideMessage() {
+        const messageDiv = document.getElementById('message');
+        messageDiv.style.display = 'none';
+    }
+
+    // Loading state functions
+    function setLoading(form, isLoading) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const btnText = form.id === 'signin' ? 'signin-btn-text' : 'signup-btn-text';
+        const textSpan = document.getElementById(btnText);
+
+        if (isLoading) {
+            submitBtn.disabled = true;
+            textSpan.innerHTML = '<span class="loading"></span>Loading...';
+        } else {
+            submitBtn.disabled = false;
+            textSpan.textContent = form.id === 'signin' ? 'Sign In' : 'Sign Up';
+        }
+    }
+
+    // Handle Sign In
+    document.getElementById('signin').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+
+        const username = document.getElementById('signin-username').value;
+        const password = document.getElementById('signin-password').value;
+
+        setLoading(form, true);
+        hideMessage();
+
+        try {
+            const response = await fetch(`${API_URL}/signin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store the token
+                localStorage.setItem('token', data.accessToken);
+                localStorage.setItem('user', JSON.stringify({
+                    id: data.id,
+                    username: data.username,
+                    email: data.email,
+                    roles: data.roles
+                }));
+
+                showMessage('Sign in successful! Redirecting...', 'success');
+
+                // Redirect after 1.5 seconds
+                setTimeout(() => {
+                    // For now, just refresh to demonstrate
+                    // Later, you can redirect to dashboard: window.location.href = 'dashboard.html';
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showMessage(data.message || 'Sign in failed. Please check your credentials.', 'error');
+            }
+        } catch (error) {
+            showMessage('Error connecting to server. Please try again.', 'error');
+            console.error('Sign in error:', error);
+        } finally {
+            setLoading(form, false);
+        }
+    });
+
+    // Handle Sign Up
+    document.getElementById('signup').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+
+        const username = document.getElementById('signup-username').value;
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const role = document.getElementById('signup-role').value;
+
+        setLoading(form, true);
+        hideMessage();
+
+        try {
+            const response = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    role: [role]
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('Registration successful! Please sign in.', 'success');
+
+                // Switch to sign in form after 2 seconds
+                setTimeout(() => {
+                    showSignIn();
+                    // Pre-fill username
+                    document.getElementById('signin-username').value = username;
+                }, 2000);
+            } else {
+                showMessage(data.message || 'Registration failed. Please try again.', 'error');
+            }
+        } catch (error) {
+            showMessage('Error connecting to server. Please try again.', 'error');
+            console.error('Sign up error:', error);
+        } finally {
+            setLoading(form, false);
+        }
+    });
+
+    // Check if user is already logged in
+    window.addEventListener('load', () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            // User is already logged in, you can redirect to dashboard
+            // For now, just show a message
+            showMessage('You are already logged in!', 'success');
+        }
+    });
+</script>
+</body>
+</html>
