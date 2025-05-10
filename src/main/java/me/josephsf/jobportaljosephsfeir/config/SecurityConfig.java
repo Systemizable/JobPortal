@@ -60,10 +60,11 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/images/**").permitAll() // Allow static resources
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
-                        .requestMatchers("/api/jobs").permitAll() // Allow viewing jobs without auth
-                        .requestMatchers("/api/jobs/**").permitAll() // Allow viewing specific job without auth
+                        .requestMatchers("/api/jobs").permitAll()
+                        .requestMatchers("/api/jobs/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
