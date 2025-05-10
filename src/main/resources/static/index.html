@@ -399,23 +399,51 @@
             setLoading(form, false);
         }
     });
-
-    // Check if user is already logged in
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-        if (token && user.roles) {
-            // Redirect to appropriate dashboard
-            if (user.roles.includes('ROLE_RECRUITER')) {
-                window.location.href = 'recruiter-dashboard.html';
-            } else if (user.roles.includes('ROLE_CANDIDATE')) {
-                window.location.href = 'candidate-dashboard.html';
-            } else if (user.roles.includes('ROLE_ADMIN')) {
-                window.location.href = 'admin-dashboard.html';
+        // Only attempt redirect if both token and user roles exist
+        if (token && user && user.roles && user.roles.length > 0) {
+            try {
+                // Verify token is still valid
+                const response = await fetch(`${API_URL}/auth/verify`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                // Only redirect if token is valid
+                if (response.ok) {
+                    const redirectPath = getRedirectPath(user.roles);
+                    if (window.location.pathname === '/' ||
+                        window.location.pathname === '/index.html') {
+                        window.location.href = redirectPath;
+                    }
+                } else {
+                    // Clear invalid token and user data
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                }
+            } catch (error) {
+                console.error('Token validation error:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
             }
         }
     });
+
+    // Helper function to determine redirect path
+    function getRedirectPath(roles) {
+        if (roles.includes('ROLE_RECRUITER')) {
+            return '/recruiter-dashboard.html';
+        } else if (roles.includes('ROLE_CANDIDATE')) {
+            return '/candidate-dashboard.html';
+        } else if (roles.includes('ROLE_ADMIN')) {
+            return '/admin-dashboard.html';
+        }
+        return '/index.html';
+    }
 </script>
 </body>
 </html>

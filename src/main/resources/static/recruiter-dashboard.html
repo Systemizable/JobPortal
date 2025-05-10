@@ -580,19 +580,6 @@
     // Display username
     document.getElementById('username').textContent = currentUser.username;
 
-    // Helper function to make authenticated API calls
-    async function authFetch(url, options = {}) {
-        const defaultOptions = {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
-        };
-
-        return fetch(url, { ...options, headers: defaultOptions.headers });
-    }
-
     // Tab switching
     function switchTab(tab) {
         // Update tab buttons
@@ -618,7 +605,11 @@
     async function loadMyJobs() {
         try {
             // First get recruiter ID
-            const recruiterResponse = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const recruiterResponse = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (!recruiterResponse.ok) {
                 document.getElementById('jobs-list').innerHTML =
@@ -628,18 +619,16 @@
 
             const recruiterData = await recruiterResponse.json();
 
-            // Get jobs by recruiter ID
-            const jobsResponse = await authFetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`);
+            const response = await fetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
-            if (jobsResponse.ok) {
-                const jobs = await jobsResponse.json();
-                displayMyJobs(jobs);
-            } else {
-                document.getElementById('jobs-list').innerHTML = '<p>Error loading jobs.</p>';
-            }
+            const jobs = await response.json();
+            displayMyJobs(jobs);
         } catch (error) {
             console.error('Error loading jobs:', error);
-            document.getElementById('jobs-list').innerHTML = '<p>Error loading jobs.</p>';
         }
     }
 
@@ -797,7 +786,11 @@
 
         try {
             // First get recruiter ID
-            const recruiterResponse = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const recruiterResponse = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (!recruiterResponse.ok) {
                 alert('Please create your company profile first!');
@@ -820,8 +813,12 @@
                 responsibilities: responsibilities
             };
 
-            const response = await authFetch(`${API_URL}/jobs`, {
+            const response = await fetch(`${API_URL}/jobs`, {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify(jobData)
             });
 
@@ -830,20 +827,22 @@
                 closeModal('post-job-modal');
                 switchTab('jobs');
             } else {
-                const errorData = await response.json();
-                alert('Error posting job: ' + (errorData.message || 'Unknown error'));
+                throw new Error('Failed to post job');
             }
         } catch (error) {
             console.error('Error posting job:', error);
-            alert('Error posting job: ' + error.message);
+            alert('Error posting job');
         }
     };
 
     // Toggle job status
     async function toggleJobStatus(jobId, isActive) {
         try {
-            const response = await authFetch(`${API_URL}/jobs/${jobId}/toggleActive`, {
-                method: 'PUT'
+            const response = await fetch(`${API_URL}/jobs/${jobId}/toggleActive`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
             });
 
             if (response.ok) {
@@ -867,26 +866,33 @@
     async function loadAllApplications() {
         try {
             // First get recruiter ID
-            const recruiterResponse = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const recruiterResponse = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (!recruiterResponse.ok) return;
 
             const recruiterData = await recruiterResponse.json();
 
             // Get all jobs for this recruiter
-            const jobsResponse = await authFetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`);
-
-            if (!jobsResponse.ok) {
-                document.getElementById('applications-list').innerHTML = '<p>No applications yet.</p>';
-                return;
-            }
+            const jobsResponse = await fetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             const jobs = await jobsResponse.json();
             let allApplications = [];
 
             // Get applications for each job
             for (const job of jobs) {
-                const appResponse = await authFetch(`${API_URL}/applications/job/${job.id}`);
+                const appResponse = await fetch(`${API_URL}/applications/job/${job.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
 
                 if (appResponse.ok) {
                     const appData = await appResponse.json();
@@ -902,12 +908,11 @@
             displayApplications(allApplications);
         } catch (error) {
             console.error('Error loading applications:', error);
-            document.getElementById('applications-list').innerHTML = '<p>Error loading applications.</p>';
         }
     }
 
     // Display applications
-    async function displayApplications(applications) {
+    function displayApplications(applications) {
         const applicationsList = document.getElementById('applications-list');
         applicationsList.innerHTML = '';
 
@@ -916,21 +921,14 @@
             return;
         }
 
-        for (const app of applications) {
-            try {
-                // Fetch candidate details for each application
-                const candidateResponse = await authFetch(`${API_URL}/candidates/${app.candidateId}`);
-                const candidateData = candidateResponse.ok ? await candidateResponse.json() : null;
-
-                const appCard = document.createElement('div');
-                appCard.className = 'application-card';
-                appCard.innerHTML = `
+        applications.forEach(app => {
+            const appCard = document.createElement('div');
+            appCard.className = 'application-card';
+            appCard.innerHTML = `
                     <div class="application-header">
                         <div>
                             <div class="candidate-info">Application for: ${app.jobTitle}</div>
-                            <div style="color: #718096; font-size: 14px;">
-                                ${candidateData ? `${candidateData.firstName} ${candidateData.lastName}` : `Candidate ID: ${app.candidateId}`}
-                            </div>
+                            <div style="color: #718096; font-size: 14px;">Candidate ID: ${app.candidateId}</div>
                             <div style="color: #718096; font-size: 14px;">Applied: ${new Date(app.applicationDate).toLocaleDateString()}</div>
                         </div>
                         <div class="application-status">
@@ -944,18 +942,19 @@
                     </div>
                     ${app.reviewNotes ? `<div style="margin-top: 10px;"><strong>Review Notes:</strong> ${app.reviewNotes}</div>` : ''}
                 `;
-                applicationsList.appendChild(appCard);
-            } catch (error) {
-                console.error('Error loading candidate details:', error);
-            }
-        }
+            applicationsList.appendChild(appCard);
+        });
     }
 
     // Review application
     async function reviewApplication(applicationId, candidateId, currentStatus) {
         try {
             // Get candidate details
-            const candidateResponse = await authFetch(`${API_URL}/candidates/${candidateId}`);
+            const candidateResponse = await fetch(`${API_URL}/candidates/${candidateId}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (candidateResponse.ok) {
                 const candidate = await candidateResponse.json();
@@ -979,7 +978,6 @@
             document.getElementById('review-application-modal').style.display = 'block';
         } catch (error) {
             console.error('Error loading candidate details:', error);
-            alert('Error loading candidate details');
         }
     }
 
@@ -997,8 +995,11 @@
                 url += `&reviewNotes=${encodeURIComponent(reviewNotes)}`;
             }
 
-            const response = await authFetch(url, {
-                method: 'PUT'
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
             });
 
             if (response.ok) {
@@ -1006,19 +1007,22 @@
                 closeModal('review-application-modal');
                 loadAllApplications();
             } else {
-                const errorData = await response.json();
-                alert('Error updating application: ' + (errorData.message || 'Unknown error'));
+                throw new Error('Failed to update application');
             }
         } catch (error) {
             console.error('Error updating application:', error);
-            alert('Error updating application: ' + error.message);
+            alert('Error updating application');
         }
     };
 
     // Load company profile
     async function loadCompanyProfile() {
         try {
-            const response = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const response = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (response.ok) {
                 const recruiter = await response.json();
@@ -1061,7 +1065,11 @@
 
         try {
             // Check if profile exists
-            const checkResponse = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const checkResponse = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             let method, url;
             if (checkResponse.ok) {
@@ -1075,20 +1083,23 @@
                 url = `${API_URL}/recruiters`;
             }
 
-            const response = await authFetch(url, {
+            const response = await fetch(url, {
                 method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify(profileData)
             });
 
             if (response.ok) {
                 alert('Company profile saved successfully!');
             } else {
-                const errorData = await response.json();
-                alert('Error saving profile: ' + (errorData.message || 'Unknown error'));
+                throw new Error('Failed to save profile');
             }
         } catch (error) {
             console.error('Error saving profile:', error);
-            alert('Error saving profile: ' + error.message);
+            alert('Error saving profile');
         }
     };
 
@@ -1096,14 +1107,22 @@
     async function loadStatistics() {
         try {
             // First get recruiter ID
-            const recruiterResponse = await authFetch(`${API_URL}/recruiters/user/${currentUser.id}`);
+            const recruiterResponse = await fetch(`${API_URL}/recruiters/user/${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (!recruiterResponse.ok) return;
 
             const recruiterData = await recruiterResponse.json();
 
             // Get recruiter stats
-            const statsResponse = await authFetch(`${API_URL}/recruiters/${recruiterData.id}/stats`);
+            const statsResponse = await fetch(`${API_URL}/recruiters/${recruiterData.id}/stats`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (statsResponse.ok) {
                 const stats = await statsResponse.json();
@@ -1112,7 +1131,11 @@
             }
 
             // Calculate application statistics
-            const jobsResponse = await authFetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`);
+            const jobsResponse = await fetch(`${API_URL}/jobs/recruiter/${recruiterData.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
 
             if (jobsResponse.ok) {
                 const jobs = await jobsResponse.json();
@@ -1120,7 +1143,11 @@
                 let pendingApplications = 0;
 
                 for (const job of jobs) {
-                    const appResponse = await authFetch(`${API_URL}/applications/stats/job/${job.id}`);
+                    const appResponse = await fetch(`${API_URL}/applications/stats/job/${job.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
 
                     if (appResponse.ok) {
                         const appStats = await appResponse.json();
