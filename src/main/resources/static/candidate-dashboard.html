@@ -527,6 +527,19 @@
     // Display username
     document.getElementById('username').textContent = currentUser.username;
 
+    // Helper function to make authenticated API calls
+    async function authFetch(url, options = {}) {
+        const defaultOptions = {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        };
+
+        return fetch(url, { ...options, headers: defaultOptions.headers });
+    }
+
     // Tab switching
     function switchTab(tab) {
         // Update tab buttons
@@ -551,7 +564,7 @@
     // Load jobs
     async function loadJobs() {
         try {
-            const response = await fetch(`${API_URL}/jobs`);
+            const response = await authFetch(`${API_URL}/jobs`);
             const data = await response.json();
             displayJobs(data.jobs);
         } catch (error) {
@@ -600,7 +613,7 @@
                 url = `${API_URL}/jobs/search?keyword=${encodeURIComponent(keyword)}`;
             }
 
-            const response = await fetch(url);
+            const response = await authFetch(url);
             const data = await response.json();
             let jobs = data.jobs;
 
@@ -642,11 +655,7 @@
 
         try {
             // First get candidate ID
-            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const candidateResponse = await authFetch(`${API_URL}/candidates/user/${currentUser.id}`);
 
             if (!candidateResponse.ok) {
                 alert('Please create your candidate profile first!');
@@ -663,12 +672,8 @@
                 resumeUrl: resumeUrl
             };
 
-            const response = await fetch(`${API_URL}/applications`, {
+            const response = await authFetch(`${API_URL}/applications`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
                 body: JSON.stringify(applicationData)
             });
 
@@ -690,11 +695,7 @@
     async function loadApplications() {
         try {
             // First get candidate ID
-            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const candidateResponse = await authFetch(`${API_URL}/candidates/user/${currentUser.id}`);
 
             if (!candidateResponse.ok) {
                 document.getElementById('applications-list').innerHTML =
@@ -704,21 +705,23 @@
 
             const candidateData = await candidateResponse.json();
 
-            const response = await fetch(`${API_URL}/applications/candidate/${candidateData.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const response = await authFetch(`${API_URL}/applications/candidate/${candidateData.id}`);
 
-            const data = await response.json();
-            displayApplications(data.applications);
+            if (response.ok) {
+                const data = await response.json();
+                displayApplications(data.applications);
+            } else {
+                console.error('Failed to load applications:', response.status);
+                document.getElementById('applications-list').innerHTML = '<p>Error loading applications.</p>';
+            }
         } catch (error) {
             console.error('Error loading applications:', error);
+            document.getElementById('applications-list').innerHTML = '<p>Error loading applications.</p>';
         }
     }
 
     // Display applications
-    function displayApplications(applications) {
+    async function displayApplications(applications) {
         const applicationsList = document.getElementById('applications-list');
         applicationsList.innerHTML = '';
 
@@ -727,32 +730,36 @@
             return;
         }
 
-        applications.forEach(app => {
-            const appCard = document.createElement('div');
-            appCard.className = 'job-card';
-            appCard.innerHTML = `
+        for (const app of applications) {
+            try {
+                // Fetch job details for each application
+                const jobResponse = await authFetch(`${API_URL}/jobs/${app.jobId}`);
+                const jobData = jobResponse.ok ? await jobResponse.json() : null;
+
+                const appCard = document.createElement('div');
+                appCard.className = 'job-card';
+                appCard.innerHTML = `
                     <div class="job-header">
                         <div>
-                            <div class="job-title">Job ID: ${app.jobId}</div>
-                            <div class="job-company">Applied on: ${new Date(app.applicationDate).toLocaleDateString()}</div>
+                            <div class="job-title">${jobData ? jobData.title : 'Job ID: ' + app.jobId}</div>
+                            <div class="job-company">${jobData ? jobData.companyName : 'Applied on: ' + new Date(app.applicationDate).toLocaleDateString()}</div>
                         </div>
                         <span class="status-badge status-${app.status.toLowerCase()}">${app.status}</span>
                     </div>
                     <div class="job-description">${app.coverLetter}</div>
                     ${app.reviewNotes ? `<div style="margin-top: 10px;"><strong>Review Notes:</strong> ${app.reviewNotes}</div>` : ''}
                 `;
-            applicationsList.appendChild(appCard);
-        });
+                applicationsList.appendChild(appCard);
+            } catch (error) {
+                console.error('Error fetching job details:', error);
+            }
+        }
     }
 
     // Load profile
     async function loadProfile() {
         try {
-            const response = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const response = await authFetch(`${API_URL}/candidates/user/${currentUser.id}`);
 
             if (response.ok) {
                 const candidate = await response.json();
@@ -837,11 +844,7 @@
 
         try {
             // Check if profile exists
-            const checkResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const checkResponse = await authFetch(`${API_URL}/candidates/user/${currentUser.id}`);
 
             let method, url;
             if (checkResponse.ok) {
@@ -855,23 +858,20 @@
                 url = `${API_URL}/candidates`;
             }
 
-            const response = await fetch(url, {
+            const response = await authFetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
                 body: JSON.stringify(profileData)
             });
 
             if (response.ok) {
                 alert('Profile saved successfully!');
             } else {
-                throw new Error('Failed to save profile');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save profile');
             }
         } catch (error) {
             console.error('Error saving profile:', error);
-            alert('Error saving profile');
+            alert('Error saving profile: ' + error.message);
         }
     };
 
@@ -879,11 +879,7 @@
     async function loadStatistics() {
         try {
             // First get candidate ID
-            const candidateResponse = await fetch(`${API_URL}/candidates/user/${currentUser.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const candidateResponse = await authFetch(`${API_URL}/candidates/user/${currentUser.id}`);
 
             if (!candidateResponse.ok) {
                 return;
@@ -891,11 +887,7 @@
 
             const candidateData = await candidateResponse.json();
 
-            const response = await fetch(`${API_URL}/candidates/${candidateData.id}/stats`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            const response = await authFetch(`${API_URL}/candidates/${candidateData.id}/stats`);
 
             if (response.ok) {
                 const stats = await response.json();
@@ -915,6 +907,13 @@
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = 'index.html';
+    }
+
+    // Handle closing modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
     }
 
     // Initial load
