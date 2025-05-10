@@ -1,13 +1,10 @@
 package me.josephsf.jobportaljosephsfeir.service;
 
-import jakarta.annotation.PostConstruct;
 import me.josephsf.jobportaljosephsfeir.dto.JobDto;
 import me.josephsf.jobportaljosephsfeir.model.Job;
 import me.josephsf.jobportaljosephsfeir.repository.JobRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -114,24 +111,5 @@ public class JobService {
         job.setResponsibilities(jobDto.getResponsibilities());
         job.setDeadline(jobDto.getDeadline());
     }
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
-    @PostConstruct
-    public void checkConnection() {
-        try {
-            String dbName = mongoTemplate.getDb().getName();
-            System.out.println("🔍 CONNECTED TO DATABASE: " + dbName);
-
-            // Check collections
-            Set<String> collections = mongoTemplate.getCollectionNames();
-            System.out.println("📁 COLLECTIONS: " + collections);
-
-            // Show MongoDB server address
-            System.out.println("🌐 MONGO SERVER: " +
-                    mongoTemplate.getDb().toString());
-        } catch (Exception e) {
-            System.out.println("❌ FAILED TO CONNECT: " + e.getMessage());
-        }
-    }
 }
