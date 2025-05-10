@@ -399,7 +399,41 @@
             setLoading(form, false);
         }
     });
+    window.addEventListener('load', async () => {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+        if (token && user.roles) {
+            try {
+                // Verify token is still valid by making an API call
+                const response = await fetch('https://josephsfeirjobportal.onrender.com/api/auth/verify', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    // Token is valid, redirect to dashboard
+                    if (user.roles.includes('ROLE_RECRUITER')) {
+                        window.location.href = 'recruiter-dashboard.html';
+                    } else if (user.roles.includes('ROLE_CANDIDATE')) {
+                        window.location.href = 'candidate-dashboard.html';
+                    } else if (user.roles.includes('ROLE_ADMIN')) {
+                        window.location.href = 'admin-dashboard.html';
+                    }
+                } else {
+                    // Token is invalid, clear storage
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                }
+            } catch (error) {
+                // Error validating token, clear storage
+                console.error('Token validation error:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            }
+        }
+    });
     // Check if user is already logged in
     window.addEventListener('load', () => {
         const token = localStorage.getItem('token');
