@@ -9,7 +9,8 @@ services:
       sizeGB: 1
     envVars:
       - key: MONGODB_URI
-        sync: false
+        value: "mongodb+srv://JosephSfeir:Sfeir7705@job-portal-cluster.uihqk1x.mongodb.net/job_portal?retryWrites=true&w=majority"
       - key: JWT_SECRET
-        sync: false
+        value: "MWJhOTI5NmVjNDRlODEzNTUyOTY2M2MwZDY4NjE4N2UxMjg4MDllNjM4MTU1ZTJhZGY5ZDE1YWI0MzY2YTc5Mg=="
+
     healthCheckPath: /actuator/health
