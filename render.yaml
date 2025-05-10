@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: jobportal-josephsf
+    env: docker
+    dockerfilePath: ./Dockerfile
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+    healthCheckPath: /actuator/health
