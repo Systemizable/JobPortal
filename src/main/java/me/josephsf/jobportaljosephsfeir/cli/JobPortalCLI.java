@@ -21,13 +21,14 @@ public class JobPortalCLI implements CommandLineRunner {
     private String currentUserRole = null;
     private String currentUserId = null;
     private String currentUsername = null;
-    private final String API_BASE_URL = "https://josephsfeirjobportal.onrender.com/api";
+    private final String API_BASE_URL;
 
     public JobPortalCLI() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
+        // Use deployed API URL by default, or get from environment variable
+        this.API_BASE_URL = System.getProperty("api.base.url", "https://josephsfeirjobportal.onrender.com/api");
     }
-
     @Override
     public void run(String... args) throws Exception {
         System.out.println("=================================");

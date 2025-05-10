@@ -12,5 +12,6 @@ services:
         value: "mongodb+srv://JosephSfeir:Sfeir7705@job-portal-cluster.uihqk1x.mongodb.net/job_portal?retryWrites=true&w=majority"
       - key: JWT_SECRET
         value: "MWJhOTI5NmVjNDRlODEzNTUyOTY2M2MwZDY4NjE4N2UxMjg4MDllNjM4MTU1ZTJhZGY5ZDE1YWI0MzY2YTc5Mg=="
-
+      - key: SPRING_PROFILES_ACTIVE
+        value: "prod"
     healthCheckPath: /actuator/health
