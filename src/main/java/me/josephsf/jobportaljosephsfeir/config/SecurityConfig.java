@@ -64,11 +64,16 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/", "/index.html", "/static/**", "/css/**", "/js/**", "/images/**").permitAll() // Allow static resources
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/jobs").permitAll()
                         .requestMatchers("/api/jobs/**").permitAll()
+                        // Add these lines to allow access to HTML files
+                        .requestMatchers("/**/*.html").permitAll()
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/index.html").permitAll()
+                        .requestMatchers("/candidate-dashboard.html").permitAll()
+                        .requestMatchers("/recruiter-dashboard.html").permitAll()
                         .anyRequest().authenticated()
                 );
 
