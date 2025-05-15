@@ -23,6 +23,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * REST controller for handling authentication operations in the Job Portal system.
+ * <p>
+ * This controller provides endpoints for user authentication operations including
+ * user registration (signup) and login (signin). It manages JWT token generation
+ * for authenticated users and handles user role assignments during registration.
+ * The endpoints in this controller are publicly accessible without authentication.
+ * </p>
+ *
+ * @author Joseph Sfeir
+ * @version 1.0
+ * @since 2025-05-14
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
@@ -32,6 +45,14 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
 
+    /**
+     * Constructs an AuthController with the specified dependencies.
+     *
+     * @param authenticationManager The manager for authenticating user credentials
+     * @param userRepository The repository for user data operations
+     * @param encoder The password encoder for securely hashing passwords
+     * @param jwtUtils Utility for JWT token generation and validation
+     */
     public AuthController(AuthenticationManager authenticationManager,
                           UserRepository userRepository,
                           PasswordEncoder encoder,
@@ -42,6 +63,18 @@ public class AuthController {
         this.jwtUtils = jwtUtils;
     }
 
+    /**
+     * Authenticates a user and generates a JWT token.
+     * <p>
+     * This endpoint processes login requests by validating the provided credentials
+     * against the stored user data. Upon successful authentication, it generates a
+     * JWT token that can be used for subsequent authorized API requests. The response
+     * includes the token, user ID, username, email, and assigned roles.
+     * </p>
+     *
+     * @param loginRequest The DTO containing login credentials (username and password)
+     * @return ResponseEntity with JWT token and user information on success
+     */
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginDto loginRequest) {
         Authentication authentication = authenticationManager
@@ -64,6 +97,19 @@ public class AuthController {
                 roles));
     }
 
+    /**
+     * Registers a new user in the system.
+     * <p>
+     * This endpoint handles user registration by validating the request data,
+     * checking for existing username or email conflicts, and creating a new user
+     * account with the specified roles. If no role is specified, the user is
+     * assigned the default CANDIDATE role. The password is securely encoded
+     * before storage.
+     * </p>
+     *
+     * @param signUpRequest The DTO containing registration details (username, email, password, roles)
+     * @return ResponseEntity with success message or error details
+     */
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterDto signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {

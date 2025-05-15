@@ -35,12 +35,11 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-impl:0.11.5")
     implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
 
-    // Swagger/OpenAPI for Documentation
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0")
-
-
     // Development tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+    // Annotation Processors
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -51,4 +50,25 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Corrected Javadoc task
+tasks.register<Javadoc>("generateJavadoc") {
+    source = sourceSets.main.get().allJava
+    classpath = configurations.compileClasspath.get()
+    setDestinationDir(file("${layout.buildDirectory.asFile.get()}/docs/javadoc"))
+
+    (options as StandardJavadocDocletOptions).apply {
+        encoding = "UTF-8"
+        title = "JobPortal API Documentation"
+        memberLevel = JavadocMemberLevel.PROTECTED
+    }
+}
+
+// Additional Javadoc configuration for the default javadoc task
+tasks.javadoc {
+    (options as StandardJavadocDocletOptions).apply {
+        encoding = "UTF-8"
+        title = "Job Portal API Documentation"
+    }
 }

@@ -16,16 +16,45 @@ import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * REST controller for managing job applications in the Job Portal system.
+ * <p>
+ * This controller handles HTTP requests related to job applications, including
+ * submitting applications, retrieving application details, updating application
+ * status, and generating application statistics. It provides endpoints for both
+ * candidates and recruiters based on their roles and permissions.
+ * </p>
+ *
+ * @author Joseph Sfeir
+ * @version 1.0
+ * @since 2025-05-14
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/applications")
 public class ApplicationController {
     private final ApplicationService applicationService;
 
+    /**
+     * Constructs an ApplicationController with the specified service.
+     *
+     * @param applicationService The service for application-related operations
+     */
     public ApplicationController(ApplicationService applicationService) {
         this.applicationService = applicationService;
     }
 
+    /**
+     * Endpoint for a candidate to apply to a job.
+     * <p>
+     * This endpoint allows a candidate to submit an application for a specific job.
+     * It requires a valid application DTO containing job and candidate information.
+     * A candidate can only apply once to each job.
+     * </p>
+     *
+     * @param applicationDto The DTO containing application details
+     * @return ResponseEntity with the created application or an error response
+     */
     @PostMapping
     @PreAuthorize("hasRole('CANDIDATE')")
     public ResponseEntity<?> applyToJob(@Valid @RequestBody ApplicationDto applicationDto) {
@@ -37,6 +66,16 @@ public class ApplicationController {
         return ResponseEntity.ok(application);
     }
 
+    /**
+     * Retrieves a specific job application by its ID.
+     * <p>
+     * This endpoint is accessible to both candidates and recruiters.
+     * It returns the application details if found.
+     * </p>
+     *
+     * @param id The ID of the application to retrieve
+     * @return ResponseEntity with the application or a not-found status
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('CANDIDATE', 'RECRUITER')")
     public ResponseEntity<?> getApplicationById(@PathVariable String id) {
@@ -47,6 +86,20 @@ public class ApplicationController {
         return ResponseEntity.ok(application);
     }
 
+    /**
+     * Retrieves all applications submitted by a specific candidate.
+     * <p>
+     * This endpoint supports pagination and sorting of results.
+     * It returns a paginated response with application details.
+     * </p>
+     *
+     * @param candidateId The ID of the candidate
+     * @param page The page number (zero-based)
+     * @param size The size of each page
+     * @param sortBy The field to sort by
+     * @param sortDir The sort direction (asc or desc)
+     * @return ResponseEntity with paginated application data
+     */
     @GetMapping("/candidate/{candidateId}")
     @PreAuthorize("hasRole('CANDIDATE')")
     public ResponseEntity<Map<String, Object>> getApplicationsByCandidate(
@@ -70,6 +123,20 @@ public class ApplicationController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Retrieves all applications for a specific job.
+     * <p>
+     * This endpoint is accessible to recruiters and supports pagination and sorting.
+     * It returns a paginated response with application details for the specified job.
+     * </p>
+     *
+     * @param jobId The ID of the job
+     * @param page The page number (zero-based)
+     * @param size The size of each page
+     * @param sortBy The field to sort by
+     * @param sortDir The sort direction (asc or desc)
+     * @return ResponseEntity with paginated application data
+     */
     @GetMapping("/job/{jobId}")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<Map<String, Object>> getApplicationsByJob(
@@ -93,6 +160,19 @@ public class ApplicationController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Updates the status of a job application.
+     * <p>
+     * This endpoint allows recruiters to change the status of an application
+     * (e.g., to REVIEWING, SHORTLISTED, REJECTED, or ACCEPTED) and optionally
+     * add review notes about the application.
+     * </p>
+     *
+     * @param id The ID of the application to update
+     * @param status The new status for the application
+     * @param reviewNotes Optional notes about the application review
+     * @return ResponseEntity with the updated application or a not-found status
+     */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<?> updateApplicationStatus(
@@ -107,6 +187,17 @@ public class ApplicationController {
         return ResponseEntity.ok(updatedApplication);
     }
 
+    /**
+     * Adds or updates the review notes for a job application.
+     * <p>
+     * This endpoint allows recruiters to add or modify review notes
+     * about an application without changing its status.
+     * </p>
+     *
+     * @param id The ID of the application
+     * @param reviewNotes The review notes to add or update
+     * @return ResponseEntity with the updated application or a not-found status
+     */
     @PutMapping("/{id}/review")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<?> addReviewNotes(
@@ -120,6 +211,17 @@ public class ApplicationController {
         return ResponseEntity.ok(updatedApplication);
     }
 
+    /**
+     * Adds or updates the interview notes for a job application.
+     * <p>
+     * This endpoint allows recruiters to add or modify notes about
+     * an interview conducted with the candidate.
+     * </p>
+     *
+     * @param id The ID of the application
+     * @param interviewNotes The interview notes to add or update
+     * @return ResponseEntity with the updated application or a not-found status
+     */
     @PutMapping("/{id}/interview")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<?> addInterviewNotes(
@@ -133,6 +235,16 @@ public class ApplicationController {
         return ResponseEntity.ok(updatedApplication);
     }
 
+    /**
+     * Withdraws a job application.
+     * <p>
+     * This endpoint allows candidates to withdraw their application
+     * for a job, removing it from the system.
+     * </p>
+     *
+     * @param id The ID of the application to withdraw
+     * @return ResponseEntity with a success response or a not-found status
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('CANDIDATE')")
     public ResponseEntity<?> withdrawApplication(@PathVariable String id) {
@@ -143,6 +255,17 @@ public class ApplicationController {
         return ResponseEntity.ok(new ApiResponseDto(true, "Application withdrawn successfully"));
     }
 
+    /**
+     * Retrieves statistics for applications to a specific job.
+     * <p>
+     * This endpoint provides counts of applications by status
+     * (e.g., APPLIED, REVIEWING, SHORTLISTED, REJECTED, ACCEPTED)
+     * for a given job.
+     * </p>
+     *
+     * @param jobId The ID of the job
+     * @return ResponseEntity with application statistics
+     */
     @GetMapping("/stats/job/{jobId}")
     @PreAuthorize("hasRole('RECRUITER')")
     public ResponseEntity<?> getApplicationStats(@PathVariable String jobId) {

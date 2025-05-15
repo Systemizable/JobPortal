@@ -1,4 +1,12 @@
 services:
+  - type: static
+    name: jobportal-javadoc
+    buildCommand: ./gradlew generateJavadoc
+    publishDir: build/docs/javadoc
+    routes:
+      - type: static
+        source: /docs
+
   - type: web
     name: jobportal-josephsf
     env: docker

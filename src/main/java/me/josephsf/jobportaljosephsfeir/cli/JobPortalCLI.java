@@ -6,28 +6,76 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+/**
+ * JobPortalCLI - A command-line client for interacting with the Job Portal API.
+ *
+ * <p>This class implements a text-based interface for users to interact with the
+ * Job Portal system. It provides functionality for both candidates (job seekers)
+ * and recruiters. The client communicates with the Job Portal RESTful API to
+ * perform CRUD operations on the MongoDB database.</p>
+ *
+ * <p>Features include:</p>
+ * <ul>
+ *   <li>User authentication (login/register)</li>
+ *   <li>Profile management for candidates and recruiters</li>
+ *   <li>Job posting and application management</li>
+ *   <li>Job searching and browsing</li>
+ *   <li>Application status tracking and updating</li>
+ * </ul>
+ *
+ * @author Joseph Sfeir
+ * @version 1.0
+ * @since 2025-05-14
+ */
+@Component
 public class JobPortalCLI implements CommandLineRunner {
 
+    /** RestTemplate instance for making HTTP requests to the Job Portal API */
     private final RestTemplate restTemplate;
+
+    /** ObjectMapper for JSON serialization and deserialization */
     private final ObjectMapper objectMapper;
+
+    /** JWT authentication token for the current user session */
     private String authToken = null;
+
+    /** Role of the current logged-in user (CANDIDATE or RECRUITER) */
     private String currentUserRole = null;
+
+    /** MongoDB user ID of the current logged-in user */
     private String currentUserId = null;
+
+    /** Username of the current logged-in user */
     private String currentUsername = null;
+
+    /** Base URL for the Job Portal API endpoints */
     private final String API_BASE_URL;
 
+    /**
+     * Constructs a new JobPortalCLI instance.
+     * Initializes the REST client and configures the API base URL.
+     * The base URL can be overridden using the system property "api.base.url".
+     */
     public JobPortalCLI() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
-        // Use deployed API URL by default, or get from environment variable
-        this.API_BASE_URL = System.getProperty("api.base.url", "https://josephsfeirjobportal.onrender.com/api");
+        // Use local API URL by default, can be overridden with system property
+        this.API_BASE_URL = System.getProperty("api.base.url", "http://localhost:8080/api");
     }
+
+    /**
+     * Entry point for the command-line client.
+     * This method is called by Spring Boot when the application starts.
+     * It displays the main menu and handles user input in a loop until exit.
+     *
+     * @param args Command line arguments (not used)
+     * @throws Exception If an error occurs during execution
+     */
     @Override
     public void run(String... args) throws Exception {
         System.out.println("=================================");
@@ -82,6 +130,13 @@ public class JobPortalCLI implements CommandLineRunner {
         scanner.close();
     }
 
+    /**
+     * Authenticates a user with the Job Portal API.
+     * Prompts for username and password, then sends a login request.
+     * On successful login, stores the JWT token and user information.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void login(Scanner scanner) {
         System.out.println("\n=== LOGIN ===");
         System.out.print("Username: ");
@@ -98,6 +153,8 @@ public class JobPortalCLI implements CommandLineRunner {
             request.put("password", password);
 
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(request, headers);
+
+            System.out.println("Attempting to login...");
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     API_BASE_URL + "/auth/signin", entity, Map.class);
 
@@ -108,24 +165,53 @@ public class JobPortalCLI implements CommandLineRunner {
                 currentUsername = (String) responseBody.get("username");
 
                 // Extract role from roles array
-                Object rolesObj = responseBody.get("roles");
-                if (rolesObj instanceof java.util.List) {
-                    java.util.List<?> roles = (java.util.List<?>) rolesObj;
-                    if (!roles.isEmpty()) {
-                        currentUserRole = roles.get(0).toString().replace("ROLE_", "");
-                    }
+                List<?> roles = (List<?>) responseBody.get("roles");
+                if (roles != null && !roles.isEmpty()) {
+                    String roleWithPrefix = roles.get(0).toString();
+                    currentUserRole = roleWithPrefix.replace("ROLE_", "");
                 }
 
                 System.out.println("\n✓ Login successful!");
                 System.out.println("Welcome back, " + currentUsername + "!");
+
+                // Check if profile exists based on role
+                if ("RECRUITER".equalsIgnoreCase(currentUserRole)) {
+                    String recruiterId = getRecruiterId();
+                    if (recruiterId == null) {
+                        System.out.println("\n⚠ You don't have a recruiter profile yet.");
+                        System.out.println("Would you like to create one now? (y/n): ");
+                        String createNow = scanner.nextLine();
+                        if (createNow.equalsIgnoreCase("y")) {
+                            createOrUpdateRecruiterProfile(scanner);
+                        }
+                    }
+                } else if ("CANDIDATE".equalsIgnoreCase(currentUserRole)) {
+                    String candidateId = getCandidateId();
+                    if (candidateId == null) {
+                        System.out.println("\n⚠ You don't have a candidate profile yet.");
+                        System.out.println("Would you like to create one now? (y/n): ");
+                        String createNow = scanner.nextLine();
+                        if (createNow.equalsIgnoreCase("y")) {
+                            createOrUpdateCandidateProfile(scanner);
+                        }
+                    }
+                }
             } else {
                 System.out.println("\n✗ Login failed. Please check your credentials.");
             }
         } catch (Exception e) {
             System.out.println("\n✗ Error during login: " + e.getMessage());
+            System.out.println("Please make sure the server is running at: " + API_BASE_URL);
         }
     }
 
+    /**
+     * Registers a new user with the Job Portal API.
+     * Collects user information including username, email, password, and role.
+     * After successful registration, offers to log the user in automatically.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void register(Scanner scanner) {
         System.out.println("\n=== REGISTER ===");
         System.out.print("Username: ");
@@ -134,6 +220,7 @@ public class JobPortalCLI implements CommandLineRunner {
         String email = scanner.nextLine();
         System.out.print("Password: ");
         String password = scanner.nextLine();
+
         System.out.println("Account Type:");
         System.out.println("1. Candidate (Job Seeker)");
         System.out.println("2. Recruiter");
@@ -143,6 +230,17 @@ public class JobPortalCLI implements CommandLineRunner {
         String role = roleChoice.equals("2") ? "recruiter" : "candidate";
 
         try {
+            // Check if username already exists
+            System.out.println("Checking if username is available...");
+            try {
+                restTemplate.getForEntity(API_BASE_URL + "/auth/check-username/" + username, Object.class);
+                System.out.println("\n✗ Username already exists. Please choose another one.");
+                return;
+            } catch (Exception e) {
+                // Username doesn't exist, which is good for registration
+                System.out.println("Username is available.");
+            }
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -153,37 +251,86 @@ public class JobPortalCLI implements CommandLineRunner {
             request.put("role", java.util.Arrays.asList(role));
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            System.out.println("Creating account...");
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     API_BASE_URL + "/auth/signup", entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
-                System.out.println("\n✓ Registration successful! You can now login.");
+                System.out.println("\n✓ Registration successful!");
+
+                // Auto-login after registration
+                System.out.println("Would you like to login now? (y/n): ");
+                String loginNow = scanner.nextLine();
+                if (loginNow.equalsIgnoreCase("y")) {
+                    Map<String, String> loginRequest = new HashMap<>();
+                    loginRequest.put("username", username);
+                    loginRequest.put("password", password);
+
+                    HttpEntity<Map<String, String>> loginEntity = new HttpEntity<>(loginRequest, headers);
+                    ResponseEntity<Map> loginResponse = restTemplate.postForEntity(
+                            API_BASE_URL + "/auth/signin", loginEntity, Map.class);
+
+                    if (loginResponse.getStatusCode() == HttpStatus.OK) {
+                        Map<String, Object> responseBody = loginResponse.getBody();
+                        authToken = (String) responseBody.get("accessToken");
+                        currentUserId = (String) responseBody.get("id");
+                        currentUsername = username;
+
+                        // Extract role
+                        List<?> roles = (List<?>) responseBody.get("roles");
+                        if (roles != null && !roles.isEmpty()) {
+                            String roleWithPrefix = roles.get(0).toString();
+                            currentUserRole = roleWithPrefix.replace("ROLE_", "");
+                        }
+
+                        System.out.println("\n✓ Login successful!");
+
+                        // Prompt to create profile
+                        System.out.println("Would you like to create your profile now? (y/n): ");
+                        String createProfile = scanner.nextLine();
+                        if (createProfile.equalsIgnoreCase("y")) {
+                            if ("RECRUITER".equalsIgnoreCase(currentUserRole)) {
+                                createOrUpdateRecruiterProfile(scanner);
+                            } else if ("CANDIDATE".equalsIgnoreCase(currentUserRole)) {
+                                createOrUpdateCandidateProfile(scanner);
+                            }
+                        }
+                    }
+                }
             } else {
                 Map<String, Object> responseBody = response.getBody();
                 System.out.println("\n✗ Registration failed: " + responseBody.get("message"));
             }
         } catch (Exception e) {
             System.out.println("\n✗ Error during registration: " + e.getMessage());
+            System.out.println("Please make sure the server is running at: " + API_BASE_URL);
         }
     }
+
+    /**
+     * Displays the menu for recruiter users and processes their selections.
+     * Checks if the recruiter has created a profile before allowing certain actions.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void showRecruiterMenu(Scanner scanner) {
+        // Check if profile exists
+        String recruiterId = getRecruiterId();
+        boolean hasProfile = (recruiterId != null);
+
         System.out.println("\n=== RECRUITER MENU ===");
 
-        // Check if profile exists with better debugging
-        String recruiterId = getRecruiterId();
-        if (recruiterId == null) {
-            System.out.println("\n⚠  WARNING: You need to create your recruiter profile first!");
-            System.out.println("   Most features will not work until you create a profile.");
-        } else {
-            System.out.println("\n✓ Recruiter profile found (ID: " + recruiterId + ")");
+        if (!hasProfile) {
+            System.out.println("\n⚠ WARNING: You need to create your recruiter profile first!");
         }
 
-        System.out.println("\n1. Post a Job");
-        System.out.println("2. View My Jobs");
+        System.out.println("1. Post a Job" + (!hasProfile ? " (requires profile)" : ""));
+        System.out.println("2. View My Jobs" + (!hasProfile ? " (requires profile)" : ""));
         System.out.println("3. View Job Applications");
         System.out.println("4. Update Application Status");
         System.out.println("5. View Job Statistics");
-        System.out.println("6. Create/Update Profile" + (recruiterId == null ? " (Required - Do this first!)" : ""));
+        System.out.println("6. Create/Update Profile" + (!hasProfile ? " ⚠ (Required!)" : ""));
         System.out.println("7. Logout");
         System.out.print("\nEnter choice: ");
 
@@ -191,15 +338,15 @@ public class JobPortalCLI implements CommandLineRunner {
 
         switch (choice) {
             case "1":
-                if (recruiterId == null) {
-                    System.out.println("\n⚠  You must create your profile first! (Choose option 6)");
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 6)");
                 } else {
                     postJob(scanner);
                 }
                 break;
             case "2":
-                if (recruiterId == null) {
-                    System.out.println("\n⚠  You must create your profile first! (Choose option 6)");
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 6)");
                 } else {
                     viewMyJobs();
                 }
@@ -224,17 +371,32 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Displays the menu for candidate users and processes their selections.
+     * Checks if the candidate has created a profile before allowing certain actions.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void showCandidateMenu(Scanner scanner) {
+        // Check if profile exists
+        String candidateId = getCandidateId();
+        boolean hasProfile = (candidateId != null);
+
         System.out.println("\n=== CANDIDATE MENU ===");
+
+        if (!hasProfile) {
+            System.out.println("\n⚠ WARNING: You need to create your candidate profile first!");
+        }
+
         System.out.println("1. Browse Jobs");
         System.out.println("2. Search Jobs");
-        System.out.println("3. Apply to Job");
-        System.out.println("4. View My Applications");
-        System.out.println("5. Create/Update Profile");
-        System.out.println("6. Update Resume");
-        System.out.println("7. View Application Statistics");
+        System.out.println("3. Apply to Job" + (!hasProfile ? " (requires profile)" : ""));
+        System.out.println("4. View My Applications" + (!hasProfile ? " (requires profile)" : ""));
+        System.out.println("5. Create/Update Profile" + (!hasProfile ? " ⚠ (Required!)" : ""));
+        System.out.println("6. Update Resume" + (!hasProfile ? " (requires profile)" : ""));
+        System.out.println("7. View Application Statistics" + (!hasProfile ? " (requires profile)" : ""));
         System.out.println("8. Logout");
-        System.out.print("Enter choice: ");
+        System.out.print("\nEnter choice: ");
 
         String choice = scanner.nextLine();
 
@@ -246,19 +408,35 @@ public class JobPortalCLI implements CommandLineRunner {
                 searchJobs(scanner);
                 break;
             case "3":
-                applyToJob(scanner);
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 5)");
+                } else {
+                    applyToJob(scanner);
+                }
                 break;
             case "4":
-                viewMyApplications();
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 5)");
+                } else {
+                    viewMyApplications();
+                }
                 break;
             case "5":
                 createOrUpdateCandidateProfile(scanner);
                 break;
             case "6":
-                updateResume(scanner);
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 5)");
+                } else {
+                    updateResume(scanner);
+                }
                 break;
             case "7":
-                viewApplicationStatistics();
+                if (!hasProfile) {
+                    System.out.println("\n⚠ You must create your profile first! (Choose option 5)");
+                } else {
+                    viewApplicationStatistics();
+                }
                 break;
             case "8":
                 logout();
@@ -268,6 +446,13 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Creates a new job posting in the MongoDB database through the API.
+     * Collects all job details from user input and submits to the server.
+     * Requires an existing recruiter profile.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void postJob(Scanner scanner) {
         System.out.println("\n=== POST A JOB ===");
         System.out.print("Job Title: ");
@@ -313,10 +498,35 @@ public class JobPortalCLI implements CommandLineRunner {
                 }
             }
 
-            // Add default requirements and responsibilities
-            request.put("requirements", java.util.Arrays.asList("", "")); // Empty for now
-            request.put("responsibilities", java.util.Arrays.asList("", "")); // Empty for now
+            // Get requirements
+            System.out.println("\nEnter job requirements (enter blank line to finish):");
+            java.util.List<String> requirements = new java.util.ArrayList<>();
+            while (true) {
+                System.out.print("Requirement " + (requirements.size() + 1) + ": ");
+                String req = scanner.nextLine();
+                if (req.trim().isEmpty() && !requirements.isEmpty()) {
+                    break;
+                } else if (!req.trim().isEmpty()) {
+                    requirements.add(req);
+                }
+            }
+            request.put("requirements", requirements);
 
+            // Get responsibilities
+            System.out.println("\nEnter job responsibilities (enter blank line to finish):");
+            java.util.List<String> responsibilities = new java.util.ArrayList<>();
+            while (true) {
+                System.out.print("Responsibility " + (responsibilities.size() + 1) + ": ");
+                String resp = scanner.nextLine();
+                if (resp.trim().isEmpty() && !responsibilities.isEmpty()) {
+                    break;
+                } else if (!resp.trim().isEmpty()) {
+                    responsibilities.add(resp);
+                }
+            }
+            request.put("responsibilities", responsibilities);
+
+            System.out.println("\nPosting job...");
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     API_BASE_URL + "/jobs", entity, Map.class);
@@ -333,6 +543,10 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Retrieves and displays all jobs posted by the current recruiter.
+     * Fetches job data from MongoDB through the API.
+     */
     private void viewMyJobs() {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -345,11 +559,12 @@ public class JobPortalCLI implements CommandLineRunner {
                 return;
             }
 
-            ResponseEntity<java.util.List> response = restTemplate.exchange(
-                    API_BASE_URL + "/jobs/recruiter/" + recruiterId, HttpMethod.GET, entity, java.util.List.class);
+            System.out.println("\nFetching your jobs...");
+            ResponseEntity<List> response = restTemplate.exchange(
+                    API_BASE_URL + "/jobs/recruiter/" + recruiterId, HttpMethod.GET, entity, List.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
-                java.util.List<Map<String, Object>> jobs = response.getBody();
+                List<Map<String, Object>> jobs = response.getBody();
 
                 if (jobs.isEmpty()) {
                     System.out.println("\nYou haven't posted any jobs yet.");
@@ -371,6 +586,12 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Views applications for a specific job posting.
+     * Prompts for a job ID and displays all applications received for that job.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void viewJobApplications(Scanner scanner) {
         System.out.print("\nEnter Job ID to view applications: ");
         String jobId = scanner.nextLine();
@@ -380,12 +601,14 @@ public class JobPortalCLI implements CommandLineRunner {
             headers.setBearerAuth(authToken);
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            System.out.println("\nFetching applications...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/applications/job/" + jobId, HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> responseBody = response.getBody();
-                java.util.List<Map<String, Object>> applications = (java.util.List<Map<String, Object>>) responseBody.get("applications");
+                List<Map<String, Object>> applications = (List<Map<String, Object>>) responseBody.get("applications");
 
                 if (applications.isEmpty()) {
                     System.out.println("\nNo applications for this job yet.");
@@ -406,6 +629,13 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Updates the status of a job application.
+     * Allows recruiters to mark applications as reviewing, shortlisted, rejected, or accepted.
+     * Optionally adds review notes to the application.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void updateApplicationStatus(Scanner scanner) {
         System.out.print("\nEnter Application ID: ");
         String applicationId = scanner.nextLine();
@@ -441,6 +671,8 @@ public class JobPortalCLI implements CommandLineRunner {
             }
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            System.out.println("\nUpdating application status...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     url, HttpMethod.PUT, entity, Map.class);
 
@@ -454,6 +686,12 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Views statistics for a specific job posting.
+     * Shows counts of applications by status (applied, reviewing, shortlisted, etc.).
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void viewJobStatistics(Scanner scanner) {
         System.out.print("\nEnter Job ID for statistics: ");
         String jobId = scanner.nextLine();
@@ -463,6 +701,8 @@ public class JobPortalCLI implements CommandLineRunner {
             headers.setBearerAuth(authToken);
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            System.out.println("\nFetching job statistics...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/applications/stats/job/" + jobId, HttpMethod.GET, entity, Map.class);
 
@@ -481,6 +721,14 @@ public class JobPortalCLI implements CommandLineRunner {
             System.out.println("\n✗ Error fetching statistics: " + e.getMessage());
         }
     }
+
+    /**
+     * Creates or updates a recruiter profile in the MongoDB database.
+     * If a profile already exists, updates it with new information.
+     * If no profile exists, creates a new one.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void createOrUpdateRecruiterProfile(Scanner scanner) {
         System.out.println("\n=== RECRUITER PROFILE ===");
 
@@ -530,14 +778,12 @@ public class JobPortalCLI implements CommandLineRunner {
             request.put("companyWebsite", companyWebsite);
             request.put("companyDescription", companyDescription);
 
-            System.out.println("\nSending request to: " + API_BASE_URL + "/recruiters");
-            System.out.println("User ID: " + currentUserId);
-
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
             ResponseEntity<Map> response;
+            System.out.println("\n" + (isUpdate ? "Updating" : "Creating") + " profile...");
+
             if (isUpdate) {
-                System.out.println("Updating existing profile...");
                 response = restTemplate.exchange(
                         API_BASE_URL + "/recruiters/" + existingRecruiterId,
                         HttpMethod.PUT,
@@ -545,7 +791,6 @@ public class JobPortalCLI implements CommandLineRunner {
                         Map.class
                 );
             } else {
-                System.out.println("Creating new profile...");
                 response = restTemplate.postForEntity(
                         API_BASE_URL + "/recruiters",
                         entity,
@@ -558,35 +803,30 @@ public class JobPortalCLI implements CommandLineRunner {
                 System.out.println("  You can now post jobs and access all recruiter features.");
             } else {
                 System.out.println("\n✗ Failed to " + (isUpdate ? "update" : "create") + " profile.");
-                System.out.println("  HTTP Status: " + response.getStatusCode());
-                if (response.getBody() != null && response.getBody().get("message") != null) {
-                    System.out.println("  Error: " + response.getBody().get("message"));
-                }
             }
         } catch (Exception e) {
             System.out.println("\n✗ Error with profile: " + e.getMessage());
-            e.printStackTrace();
-            if (!isUpdate) {
-                System.out.println("\nTips:");
-                System.out.println("- Make sure your internet connection is working");
-                System.out.println("- Verify the server is running");
-                System.out.println("- Try logging out and logging in again");
-            }
         }
     }
 
+    /**
+     * Retrieves and displays all available jobs from the MongoDB database.
+     * Jobs are fetched through the API and displayed with key details.
+     */
     private void browseJobs() {
         try {
             HttpHeaders headers = new HttpHeaders();
             // No auth required for browsing jobs
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            System.out.println("\nFetching available jobs...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/jobs", HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> responseBody = response.getBody();
-                java.util.List<Map<String, Object>> jobs = (java.util.List<Map<String, Object>>) responseBody.get("jobs");
+                List<Map<String, Object>> jobs = (List<Map<String, Object>>) responseBody.get("jobs");
 
                 if (jobs.isEmpty()) {
                     System.out.println("\nNo jobs available at the moment.");
@@ -611,6 +851,12 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Searches for jobs based on a keyword.
+     * Sends the search query to the API which performs a MongoDB search.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void searchJobs(Scanner scanner) {
         System.out.print("\nEnter keyword to search: ");
         String keyword = scanner.nextLine();
@@ -621,12 +867,14 @@ public class JobPortalCLI implements CommandLineRunner {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             String encodedKeyword = java.net.URLEncoder.encode(keyword, "UTF-8");
+
+            System.out.println("\nSearching for jobs matching: " + keyword);
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/jobs/search?keyword=" + encodedKeyword, HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> responseBody = response.getBody();
-                java.util.List<Map<String, Object>> jobs = (java.util.List<Map<String, Object>>) responseBody.get("jobs");
+                List<Map<String, Object>> jobs = (List<Map<String, Object>>) responseBody.get("jobs");
 
                 if (jobs.isEmpty()) {
                     System.out.println("\nNo jobs found matching your search.");
@@ -647,6 +895,13 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Submits a job application to the MongoDB database through the API.
+     * Collects application details including cover letter and resume URL.
+     * Requires an existing candidate profile.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void applyToJob(Scanner scanner) {
         System.out.print("\nEnter Job ID to apply: ");
         String jobId = scanner.nextLine();
@@ -675,6 +930,8 @@ public class JobPortalCLI implements CommandLineRunner {
             }
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            System.out.println("\nSubmitting application...");
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     API_BASE_URL + "/applications", entity, Map.class);
 
@@ -689,6 +946,10 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Retrieves and displays all job applications submitted by the current candidate.
+     * Applications are fetched from MongoDB through the API.
+     */
     private void viewMyApplications() {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -701,12 +962,13 @@ public class JobPortalCLI implements CommandLineRunner {
                 return;
             }
 
+            System.out.println("\nFetching your applications...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/applications/candidate/" + candidateId, HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> responseBody = response.getBody();
-                java.util.List<Map<String, Object>> applications = (java.util.List<Map<String, Object>>) responseBody.get("applications");
+                List<Map<String, Object>> applications = (List<Map<String, Object>>) responseBody.get("applications");
 
                 if (applications.isEmpty()) {
                     System.out.println("\nYou haven't applied to any jobs yet.");
@@ -730,8 +992,26 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Creates or updates a candidate profile in the MongoDB database.
+     * If a profile already exists, updates it with new information.
+     * If no profile exists, creates a new one.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void createOrUpdateCandidateProfile(Scanner scanner) {
         System.out.println("\n=== CANDIDATE PROFILE ===");
+
+        // First check if profile already exists
+        String existingCandidateId = getCandidateId();
+        boolean isUpdate = existingCandidateId != null;
+
+        if (isUpdate) {
+            System.out.println("✓ Existing profile found. You can update your information below.");
+        } else {
+            System.out.println("No profile found. Let's create one!");
+        }
+
         System.out.print("First Name: ");
         String firstName = scanner.nextLine();
         System.out.print("Last Name: ");
@@ -746,15 +1026,19 @@ public class JobPortalCLI implements CommandLineRunner {
         String experienceLevel = scanner.nextLine();
         System.out.print("Years of Experience: ");
         String yearsOfExperience = scanner.nextLine();
-        System.out.print("Skills (comma separated): ");
+
+        System.out.println("\nEnter your skills (comma separated or one by one)");
+        System.out.println("Examples: Java, Python, JavaScript, SQL, etc.");
+        System.out.print("Skills: ");
         String skillsStr = scanner.nextLine();
+
         System.out.print("Resume URL: ");
         String resumeUrl = scanner.nextLine();
-        System.out.print("Profile Summary: ");
+        System.out.print("Profile Summary (short bio): ");
         String profileSummary = scanner.nextLine();
-        System.out.print("LinkedIn URL: ");
+        System.out.print("LinkedIn URL (optional): ");
         String linkedInUrl = scanner.nextLine();
-        System.out.print("Portfolio URL: ");
+        System.out.print("Portfolio URL (optional): ");
         String portfolioUrl = scanner.nextLine();
 
         try {
@@ -775,12 +1059,21 @@ public class JobPortalCLI implements CommandLineRunner {
                 try {
                     request.put("yearsOfExperience", Integer.parseInt(yearsOfExperience));
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid years format. Skipping...");
+                    System.out.println("Invalid years format. Using default value of 0.");
+                    request.put("yearsOfExperience", 0);
                 }
             }
 
             if (!skillsStr.isEmpty()) {
-                request.put("skills", java.util.Arrays.asList(skillsStr.split(",\\s*")));
+                List<String> skills = new java.util.ArrayList<>();
+                // Split by comma and trim each skill
+                for (String skill : skillsStr.split(",")) {
+                    String trimmedSkill = skill.trim();
+                    if (!trimmedSkill.isEmpty()) {
+                        skills.add(trimmedSkill);
+                    }
+                }
+                request.put("skills", skills);
             }
 
             request.put("resumeUrl", resumeUrl);
@@ -788,20 +1081,48 @@ public class JobPortalCLI implements CommandLineRunner {
             request.put("linkedInUrl", linkedInUrl);
             request.put("portfolioUrl", portfolioUrl);
 
+            // We need an empty education and experience list to satisfy validation
+            request.put("education", new java.util.ArrayList<>());
+            request.put("experience", new java.util.ArrayList<>());
+
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    API_BASE_URL + "/candidates", entity, Map.class);
+            ResponseEntity<Map> response;
+
+            System.out.println("\n" + (isUpdate ? "Updating" : "Creating") + " profile...");
+
+            if (isUpdate) {
+                response = restTemplate.exchange(
+                        API_BASE_URL + "/candidates/" + existingCandidateId,
+                        HttpMethod.PUT,
+                        entity,
+                        Map.class
+                );
+            } else {
+                response = restTemplate.postForEntity(
+                        API_BASE_URL + "/candidates",
+                        entity,
+                        Map.class
+                );
+            }
 
             if (response.getStatusCode() == HttpStatus.OK) {
-                System.out.println("\n✓ Profile created/updated successfully!");
+                System.out.println("\n✓ Profile " + (isUpdate ? "updated" : "created") + " successfully!");
+                System.out.println("  You can now apply to jobs and access all candidate features.");
             } else {
-                System.out.println("\n✗ Failed to create/update profile. Profile might already exist.");
-                System.out.println("  Try updating your profile through the update endpoint or via the web interface.");
+                System.out.println("\n✗ Failed to " + (isUpdate ? "update" : "create") + " profile.");
             }
         } catch (Exception e) {
             System.out.println("\n✗ Error with profile: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+
+    /**
+     * Updates the resume URL in the candidate's profile.
+     * Sends an update request to the API which modifies the MongoDB document.
+     *
+     * @param scanner Scanner object to read user input
+     */
     private void updateResume(Scanner scanner) {
         System.out.print("\nEnter new resume URL: ");
         String resumeUrl = scanner.nextLine();
@@ -820,6 +1141,8 @@ public class JobPortalCLI implements CommandLineRunner {
                     java.net.URLEncoder.encode(resumeUrl, "UTF-8");
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            System.out.println("\nUpdating resume...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     url, HttpMethod.PUT, entity, Map.class);
 
@@ -833,6 +1156,10 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Views application statistics for the current candidate.
+     * Shows counts of applications by status and other profile metrics.
+     */
     private void viewApplicationStatistics() {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -845,6 +1172,7 @@ public class JobPortalCLI implements CommandLineRunner {
                 return;
             }
 
+            System.out.println("\nFetching application statistics...");
             ResponseEntity<Map> response = restTemplate.exchange(
                     API_BASE_URL + "/candidates/" + candidateId + "/stats", HttpMethod.GET, entity, Map.class);
 
@@ -866,6 +1194,10 @@ public class JobPortalCLI implements CommandLineRunner {
         }
     }
 
+    /**
+     * Logs out the current user by clearing authentication data.
+     * Removes the JWT token and user information from memory.
+     */
     private void logout() {
         authToken = null;
         currentUserRole = null;
@@ -873,13 +1205,17 @@ public class JobPortalCLI implements CommandLineRunner {
         currentUsername = null;
         System.out.println("\n✓ Logged out successfully!");
     }
+
+    /**
+     * Retrieves the recruiter profile ID for the current user.
+     * Makes an API request to find the recruiter profile associated with the user ID.
+     *
+     * @return The MongoDB recruiter document ID if found, null otherwise
+     */
     private String getRecruiterId() {
         if (currentUserId == null) {
-            System.out.println("DEBUG: currentUserId is null");
             return null;
         }
-
-        System.out.println("DEBUG: Looking for recruiter profile for user: " + currentUserId);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -887,30 +1223,34 @@ public class JobPortalCLI implements CommandLineRunner {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             String url = API_BASE_URL + "/recruiters/user/" + currentUserId;
-            System.out.println("DEBUG: Checking: " + url);
 
             ResponseEntity<Map> response = restTemplate.exchange(
                     url, HttpMethod.GET, entity, Map.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> recruiter = response.getBody();
-                String recruiterId = (String) recruiter.get("id");
-                System.out.println("DEBUG: Found recruiter profile with ID: " + recruiterId);
-                return recruiterId;
+                return (String) recruiter.get("id");
             }
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                System.out.println("DEBUG: No recruiter profile found for user " + currentUserId);
+                // Profile doesn't exist yet, this is expected
                 return null;
             }
-            System.out.println("DEBUG: Error getting recruiter ID: " + e.getStatusCode() + " - " + e.getMessage());
-            e.printStackTrace();
+            // For other errors, log them but still return null
+            System.out.println("Error checking recruiter profile: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("DEBUG: Error getting recruiter ID: " + e.getMessage());
-            e.printStackTrace();
+            // For unexpected errors, log them but still return null
+            System.out.println("Error checking recruiter profile: " + e.getMessage());
         }
         return null;
     }
+
+    /**
+     * Retrieves the candidate profile ID for the current user.
+     * Makes an API request to find the candidate profile associated with the user ID.
+     *
+     * @return The MongoDB candidate document ID if found, null otherwise
+     */
     private String getCandidateId() {
         if (currentUserId == null) {
             return null;
@@ -930,12 +1270,14 @@ public class JobPortalCLI implements CommandLineRunner {
             }
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                // This is expected when profile doesn't exist
+                // Profile doesn't exist yet, this is expected
                 return null;
             }
-            System.out.println("Error getting candidate ID: " + e.getMessage());
+            // For other errors, log them but still return null
+            System.out.println("Error checking candidate profile: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Error getting candidate ID: " + e.getMessage());
+            // For unexpected errors, log them but still return null
+            System.out.println("Error checking candidate profile: " + e.getMessage());
         }
         return null;
     }
