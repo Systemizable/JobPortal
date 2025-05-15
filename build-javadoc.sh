@@ -4,7 +4,7 @@ set -e
 # Install Java
 echo "Installing Java..."
 curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
+source "C:\Users\Joseph/.sdkman/bin/sdkman-init.sh"
 sdk install java 21.0.2-open
 
 # Make gradlew executable
