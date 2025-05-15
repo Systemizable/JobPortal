@@ -1,7 +1,7 @@
 services:
   - type: static
     name: jobportal-javadoc
-    buildCommand: bash -c "curl -s https://get.sdkman.io | bash && source $HOME/.sdkman/bin/sdkman-init.sh && sdk install java 21.0.2-open && chmod +x ./gradlew && ./gradlew generateJavadoc"
+    buildCommand: bash build-javadoc.sh
     publishDir: build/docs/javadoc
     routes:
       - type: static
