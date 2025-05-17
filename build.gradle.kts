@@ -56,14 +56,16 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.javadoc {
-    source = sourceSets.main.get().allJava + sourceSets.test.get().allJava
-    classpath = configurations.compileClasspath.get() + configurations.testCompileClasspath.get()
+// Corrected Javadoc task
+tasks.register<Javadoc>("generateJavadoc") {
+    source = sourceSets.main.get().allJava
+    classpath = configurations.compileClasspath.get()
+    setDestinationDir(file("${layout.buildDirectory.asFile.get()}/docs/javadoc"))
+
     (options as StandardJavadocDocletOptions).apply {
         encoding = "UTF-8"
-        title = "Job Portal API Documentation"
-        addStringOption("sourcepath", "${projectDir}/src/main/java:${projectDir}/src/test/java")
-        addBooleanOption("includeTests", true)
+        title = "JobPortal API Documentation"
+        memberLevel = JavadocMemberLevel.PROTECTED
     }
 }
 
