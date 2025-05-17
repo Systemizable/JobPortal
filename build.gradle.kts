@@ -57,22 +57,35 @@ tasks.withType<Test> {
 }
 
 // Corrected Javadoc task
+// Modified Javadoc task to include tests
 tasks.register<Javadoc>("generateJavadoc") {
-    source = sourceSets.main.get().allJava
-    classpath = configurations.compileClasspath.get()
+    source = sourceSets.main.get().allJava + sourceSets.test.get().allJava
+    classpath = configurations.compileClasspath.get() + configurations.testCompileClasspath.get()
     setDestinationDir(file("${layout.buildDirectory.asFile.get()}/docs/javadoc"))
 
     (options as StandardJavadocDocletOptions).apply {
         encoding = "UTF-8"
         title = "JobPortal API Documentation"
         memberLevel = JavadocMemberLevel.PROTECTED
+        // Add links to JDK and Spring Boot Javadoc
+        links("https://docs.oracle.com/en/java/javase/21/docs/api/")
+        links("https://docs.spring.io/spring-framework/docs/current/javadoc-api/")
+        // Add test packages to groups if desired
+        group("Core API", "me.josephsf.jobportaljosephsfeir.*")
+        group("Test API", "me.josephsf.jobportaljosephsfeir.*.test")
+        // Enable additional Javadoc tags if needed
+        tags("apiNote:a:API Note:", "implSpec:a:Implementation Specification:", "implNote:a:Implementation Note:")
     }
 }
 
-// Additional Javadoc configuration for the default javadoc task
+// Also update the standard javadoc task
 tasks.javadoc {
+    source = sourceSets.main.get().allJava + sourceSets.test.get().allJava
+    classpath = configurations.compileClasspath.get() + configurations.testCompileClasspath.get()
+
     (options as StandardJavadocDocletOptions).apply {
         encoding = "UTF-8"
         title = "Job Portal API Documentation"
+        links("https://docs.oracle.com/en/java/javase/21/docs/api/")
     }
 }
