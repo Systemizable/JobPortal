@@ -78,6 +78,11 @@ public class JobPortalCLI implements CommandLineRunner {
      */
     @Override
     public void run(String... args) throws Exception {
+        // Skip CLI initialization during tests
+        if (isTestEnvironment()) {
+            return;
+        }
+
         System.out.println("=================================");
         System.out.println("Welcome to Job Portal CLI!");
         System.out.println("=================================\n");
@@ -128,6 +133,29 @@ public class JobPortalCLI implements CommandLineRunner {
 
         System.out.println("\nThank you for using Job Portal CLI!");
         scanner.close();
+    }
+
+    /**
+     * Checks if the application is running in a test environment.
+     *
+     * @return true if running in a test environment, false otherwise
+     */
+    private boolean isTestEnvironment() {
+        // Check for common indicators of a test environment
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        if (activeProfiles.contains("test")) {
+            return true;
+        }
+
+        // Check if we're running in JUnit
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            if (element.getClassName().contains("junit") ||
+                    element.getClassName().contains("test")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -721,7 +749,6 @@ public class JobPortalCLI implements CommandLineRunner {
             System.out.println("\n✗ Error fetching statistics: " + e.getMessage());
         }
     }
-
     /**
      * Creates or updates a recruiter profile in the MongoDB database.
      * If a profile already exists, updates it with new information.

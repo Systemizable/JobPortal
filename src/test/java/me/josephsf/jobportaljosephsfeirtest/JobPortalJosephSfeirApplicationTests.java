@@ -1,4 +1,4 @@
-package me.josephsf.jobportaljosephsfeir;
+package me.josephsf.jobportaljosephsfeirtest;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

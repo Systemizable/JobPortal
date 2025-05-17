@@ -22,7 +22,11 @@ configurations {
 repositories {
     mavenCentral()
 }
-
+tasks.withType<Test> {
+    useJUnitPlatform()
+    // Set system properties for tests if needed
+    systemProperty("spring.profiles.active", "test")
+}
 dependencies {
     // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
@@ -52,16 +56,14 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-// Corrected Javadoc task
-tasks.register<Javadoc>("generateJavadoc") {
-    source = sourceSets.main.get().allJava
-    classpath = configurations.compileClasspath.get()
-    setDestinationDir(file("${layout.buildDirectory.asFile.get()}/docs/javadoc"))
-
+tasks.javadoc {
+    source = sourceSets.main.get().allJava + sourceSets.test.get().allJava
+    classpath = configurations.compileClasspath.get() + configurations.testCompileClasspath.get()
     (options as StandardJavadocDocletOptions).apply {
         encoding = "UTF-8"
-        title = "JobPortal API Documentation"
-        memberLevel = JavadocMemberLevel.PROTECTED
+        title = "Job Portal API Documentation"
+        addStringOption("sourcepath", "${projectDir}/src/main/java:${projectDir}/src/test/java")
+        addBooleanOption("includeTests", true)
     }
 }
 
