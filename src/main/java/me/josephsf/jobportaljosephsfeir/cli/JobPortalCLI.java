@@ -64,7 +64,7 @@ public class JobPortalCLI implements CommandLineRunner {
     public JobPortalCLI() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
-        // Use local API URL by default, can be overridden with system property
+
         this.API_BASE_URL = System.getProperty("api.base.url", "http://localhost:8080/api");
     }
 
@@ -78,7 +78,7 @@ public class JobPortalCLI implements CommandLineRunner {
      */
     @Override
     public void run(String... args) throws Exception {
-        // Skip CLI initialization during tests
+
         if (isTestEnvironment()) {
             return;
         }
@@ -92,7 +92,7 @@ public class JobPortalCLI implements CommandLineRunner {
 
         while (running) {
             if (authToken == null) {
-                // Not logged in
+
                 System.out.println("\nPlease choose an option:");
                 System.out.println("1. Login");
                 System.out.println("2. Register");
@@ -115,7 +115,7 @@ public class JobPortalCLI implements CommandLineRunner {
                         System.out.println("Invalid choice. Please try again.");
                 }
             } else {
-                // Logged in
+
                 System.out.println("\n=================================");
                 System.out.println("Logged in as: " + currentUsername + " (" + currentUserRole + ")");
                 System.out.println("=================================");
@@ -141,13 +141,12 @@ public class JobPortalCLI implements CommandLineRunner {
      * @return true if running in a test environment, false otherwise
      */
     private boolean isTestEnvironment() {
-        // Check for common indicators of a test environment
+
         String activeProfiles = System.getProperty("spring.profiles.active", "");
         if (activeProfiles.contains("test")) {
             return true;
         }
 
-        // Check if we're running in JUnit
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
             if (element.getClassName().contains("junit") ||
                     element.getClassName().contains("test")) {
@@ -192,7 +191,6 @@ public class JobPortalCLI implements CommandLineRunner {
                 currentUserId = (String) responseBody.get("id");
                 currentUsername = (String) responseBody.get("username");
 
-                // Extract role from roles array
                 List<?> roles = (List<?>) responseBody.get("roles");
                 if (roles != null && !roles.isEmpty()) {
                     String roleWithPrefix = roles.get(0).toString();
@@ -202,7 +200,6 @@ public class JobPortalCLI implements CommandLineRunner {
                 System.out.println("\n✓ Login successful!");
                 System.out.println("Welcome back, " + currentUsername + "!");
 
-                // Check if profile exists based on role
                 if ("RECRUITER".equalsIgnoreCase(currentUserRole)) {
                     String recruiterId = getRecruiterId();
                     if (recruiterId == null) {
@@ -258,14 +255,14 @@ public class JobPortalCLI implements CommandLineRunner {
         String role = roleChoice.equals("2") ? "recruiter" : "candidate";
 
         try {
-            // Check if username already exists
+
             System.out.println("Checking if username is available...");
             try {
                 restTemplate.getForEntity(API_BASE_URL + "/auth/check-username/" + username, Object.class);
                 System.out.println("\n✗ Username already exists. Please choose another one.");
                 return;
             } catch (Exception e) {
-                // Username doesn't exist, which is good for registration
+
                 System.out.println("Username is available.");
             }
 
@@ -287,7 +284,6 @@ public class JobPortalCLI implements CommandLineRunner {
             if (response.getStatusCode() == HttpStatus.OK) {
                 System.out.println("\n✓ Registration successful!");
 
-                // Auto-login after registration
                 System.out.println("Would you like to login now? (y/n): ");
                 String loginNow = scanner.nextLine();
                 if (loginNow.equalsIgnoreCase("y")) {
@@ -305,7 +301,6 @@ public class JobPortalCLI implements CommandLineRunner {
                         currentUserId = (String) responseBody.get("id");
                         currentUsername = username;
 
-                        // Extract role
                         List<?> roles = (List<?>) responseBody.get("roles");
                         if (roles != null && !roles.isEmpty()) {
                             String roleWithPrefix = roles.get(0).toString();
@@ -314,7 +309,6 @@ public class JobPortalCLI implements CommandLineRunner {
 
                         System.out.println("\n✓ Login successful!");
 
-                        // Prompt to create profile
                         System.out.println("Would you like to create your profile now? (y/n): ");
                         String createProfile = scanner.nextLine();
                         if (createProfile.equalsIgnoreCase("y")) {
@@ -343,7 +337,7 @@ public class JobPortalCLI implements CommandLineRunner {
      * @param scanner Scanner object to read user input
      */
     private void showRecruiterMenu(Scanner scanner) {
-        // Check if profile exists
+
         String recruiterId = getRecruiterId();
         boolean hasProfile = (recruiterId != null);
 
@@ -406,7 +400,7 @@ public class JobPortalCLI implements CommandLineRunner {
      * @param scanner Scanner object to read user input
      */
     private void showCandidateMenu(Scanner scanner) {
-        // Check if profile exists
+
         String candidateId = getCandidateId();
         boolean hasProfile = (candidateId != null);
 
@@ -526,7 +520,6 @@ public class JobPortalCLI implements CommandLineRunner {
                 }
             }
 
-            // Get requirements
             System.out.println("\nEnter job requirements (enter blank line to finish):");
             java.util.List<String> requirements = new java.util.ArrayList<>();
             while (true) {
@@ -540,7 +533,6 @@ public class JobPortalCLI implements CommandLineRunner {
             }
             request.put("requirements", requirements);
 
-            // Get responsibilities
             System.out.println("\nEnter job responsibilities (enter blank line to finish):");
             java.util.List<String> responsibilities = new java.util.ArrayList<>();
             while (true) {
@@ -759,7 +751,6 @@ public class JobPortalCLI implements CommandLineRunner {
     private void createOrUpdateRecruiterProfile(Scanner scanner) {
         System.out.println("\n=== RECRUITER PROFILE ===");
 
-        // First check if profile already exists
         String existingRecruiterId = getRecruiterId();
         boolean isUpdate = existingRecruiterId != null;
 
@@ -843,7 +834,7 @@ public class JobPortalCLI implements CommandLineRunner {
     private void browseJobs() {
         try {
             HttpHeaders headers = new HttpHeaders();
-            // No auth required for browsing jobs
+
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
@@ -890,7 +881,7 @@ public class JobPortalCLI implements CommandLineRunner {
 
         try {
             HttpHeaders headers = new HttpHeaders();
-            // No auth required for searching jobs
+
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             String encodedKeyword = java.net.URLEncoder.encode(keyword, "UTF-8");
@@ -1029,7 +1020,6 @@ public class JobPortalCLI implements CommandLineRunner {
     private void createOrUpdateCandidateProfile(Scanner scanner) {
         System.out.println("\n=== CANDIDATE PROFILE ===");
 
-        // First check if profile already exists
         String existingCandidateId = getCandidateId();
         boolean isUpdate = existingCandidateId != null;
 
@@ -1093,7 +1083,7 @@ public class JobPortalCLI implements CommandLineRunner {
 
             if (!skillsStr.isEmpty()) {
                 List<String> skills = new java.util.ArrayList<>();
-                // Split by comma and trim each skill
+
                 for (String skill : skillsStr.split(",")) {
                     String trimmedSkill = skill.trim();
                     if (!trimmedSkill.isEmpty()) {
@@ -1108,7 +1098,6 @@ public class JobPortalCLI implements CommandLineRunner {
             request.put("linkedInUrl", linkedInUrl);
             request.put("portfolioUrl", portfolioUrl);
 
-            // We need an empty education and experience list to satisfy validation
             request.put("education", new java.util.ArrayList<>());
             request.put("experience", new java.util.ArrayList<>());
 
@@ -1260,13 +1249,13 @@ public class JobPortalCLI implements CommandLineRunner {
             }
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                // Profile doesn't exist yet, this is expected
+
                 return null;
             }
-            // For other errors, log them but still return null
+
             System.out.println("Error checking recruiter profile: " + e.getMessage());
         } catch (Exception e) {
-            // For unexpected errors, log them but still return null
+
             System.out.println("Error checking recruiter profile: " + e.getMessage());
         }
         return null;
@@ -1297,13 +1286,12 @@ public class JobPortalCLI implements CommandLineRunner {
             }
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                // Profile doesn't exist yet, this is expected
+
                 return null;
             }
-            // For other errors, log them but still return null
             System.out.println("Error checking candidate profile: " + e.getMessage());
         } catch (Exception e) {
-            // For unexpected errors, log them but still return null
+
             System.out.println("Error checking candidate profile: " + e.getMessage());
         }
         return null;

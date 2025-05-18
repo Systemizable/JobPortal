@@ -1,41 +1,17 @@
-/**
- * Integration tests for ApplicationController.
- * <p>
- * This test class verifies the functionality of the job application endpoints in the
- * Job Portal API. It uses Spring's MockMvc to simulate HTTP requests and validate
- * responses without requiring a fully deployed application. The tests cover all major
- * endpoints related to job applications, including submission, retrieval, and status updates.
- * </p>
- * <p>
- * Test scenarios include:
- * </p>
- * <ul>
- *   <li>Job application submission by candidates</li>
- *   <li>Handling of duplicate applications</li>
- *   <li>Retrieving application details by ID</li>
- *   <li>Listing applications by candidate and by job</li>
- *   <li>Updating application status and notes by recruiters</li>
- *   <li>Application withdrawal by candidates</li>
- *   <li>Retrieving application statistics</li>
- * </ul>
- *
- * @author Joseph Sfeir
- * @version 1.0
- * @since 2025-05-17
- */
 package me.josephsf.jobportaljosephsfeirtest.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import me.josephsf.jobportaljosephsfeir.JobPortalJosephSfeirApplication;
 import me.josephsf.jobportaljosephsfeir.controller.ApplicationController;
 import me.josephsf.jobportaljosephsfeir.dto.ApplicationDto;
 import me.josephsf.jobportaljosephsfeir.dto.ApiResponseDto;
 import me.josephsf.jobportaljosephsfeir.model.JobApplication;
-import me.josephsf.jobportaljosephsfeir.security.JwtAuthTokenFilter;
-import me.josephsf.jobportaljosephsfeir.security.JwtUtils;
-import me.josephsf.jobportaljosephsfeir.security.UserDetailsServiceImpl;
 import me.josephsf.jobportaljosephsfeir.service.ApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -44,12 +20,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,23 +35,20 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(ApplicationController.class)
+/**
+ * Integration tests for the ApplicationController.
+ * Tests all endpoints and verifies proper handling of requests and responses.
+ */
+@SpringBootTest(classes = JobPortalJosephSfeirApplication.class)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class ApplicationControllerIntegrationTest {
+
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
     private ApplicationService applicationService;
-
-    @MockBean
-    private JwtUtils jwtUtils;
-
-    @MockBean
-    private UserDetailsServiceImpl userDetailsService;
-
-    @MockBean
-    private JwtAuthTokenFilter jwtAuthTokenFilter;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -83,11 +58,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Sets up test data before each test execution.
-     * <p>
-     * This method initializes the test application and application DTO objects
-     * with sample data that will be used across multiple test cases. It ensures
-     * that each test starts with a clean, consistent state.
-     * </p>
      */
     @BeforeEach
     void setUp() {
@@ -113,23 +83,19 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests the endpoint for submitting a job application.
-     * <p>
-     * This test verifies that candidates can successfully submit job applications
-     * through the API. It checks that the application service is called with the
-     * correct parameters and that the response contains the expected application details.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "CANDIDATE")
     void testApplyToJob() throws Exception {
         when(applicationService.applyToJob(any(ApplicationDto.class)))
                 .thenReturn(testApplication);
+
         mockMvc.perform(post("/api/applications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testApplicationDto)))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is("appId123")))
                 .andExpect(jsonPath("$.jobId", is("jobId123")))
                 .andExpect(jsonPath("$.candidateId", is("candidateId123")))
@@ -140,13 +106,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests handling of duplicate job applications.
-     * <p>
-     * This test verifies that the system prevents candidates from submitting
-     * multiple applications to the same job. It checks that the response includes
-     * an appropriate error message when a duplicate application is detected.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "CANDIDATE")
@@ -154,10 +113,14 @@ public class ApplicationControllerIntegrationTest {
         when(applicationService.applyToJob(any(ApplicationDto.class)))
                 .thenReturn(null); // Indicates duplicate application
 
+        ApiResponseDto errorResponse = new ApiResponseDto(false, "You have already applied to this job");
+
         mockMvc.perform(post("/api/applications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testApplicationDto)))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", containsString("already applied")));
 
@@ -166,13 +129,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests retrieving a job application by ID.
-     * <p>
-     * This test verifies that authorized users (candidates and recruiters) can
-     * retrieve the details of a specific job application by its ID. It checks that
-     * the response contains the expected application information.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = {"CANDIDATE", "RECRUITER"})
@@ -181,7 +137,9 @@ public class ApplicationControllerIntegrationTest {
                 .thenReturn(testApplication);
 
         mockMvc.perform(get("/api/applications/appId123"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is("appId123")))
                 .andExpect(jsonPath("$.jobId", is("jobId123")))
                 .andExpect(jsonPath("$.candidateId", is("candidateId123")))
@@ -192,12 +150,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests the 404 response when an application is not found.
-     * <p>
-     * This test verifies that the system returns an appropriate 404 Not Found
-     * response when a user attempts to retrieve an application that doesn't exist.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = {"CANDIDATE", "RECRUITER"})
@@ -206,6 +158,7 @@ public class ApplicationControllerIntegrationTest {
                 .thenReturn(null);
 
         mockMvc.perform(get("/api/applications/nonExistentId"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isNotFound());
 
         verify(applicationService, times(1)).getApplicationById("nonExistentId");
@@ -213,13 +166,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests retrieving applications by candidate ID.
-     * <p>
-     * This test verifies that candidates can retrieve a list of their own job
-     * applications. It checks that the response includes pagination information
-     * and the expected application details.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "CANDIDATE")
@@ -230,8 +176,17 @@ public class ApplicationControllerIntegrationTest {
         when(applicationService.getApplicationsByCandidate(eq("candidateId123"), any(Pageable.class)))
                 .thenReturn(applicationPage);
 
+        // Create a response structure that matches what the controller produces
+        Map<String, Object> expectedResponse = new HashMap<>();
+        expectedResponse.put("applications", applications);
+        expectedResponse.put("currentPage", 0);
+        expectedResponse.put("totalItems", 1L);
+        expectedResponse.put("totalPages", 1);
+
         mockMvc.perform(get("/api/applications/candidate/candidateId123"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.applications", hasSize(1)))
                 .andExpect(jsonPath("$.applications[0].id", is("appId123")))
                 .andExpect(jsonPath("$.applications[0].status", is("APPLIED")))
@@ -243,13 +198,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests retrieving applications for a specific job.
-     * <p>
-     * This test verifies that recruiters can retrieve all applications submitted
-     * for a particular job posting. It checks that the response includes pagination
-     * information and the expected application details.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "RECRUITER")
@@ -260,8 +208,17 @@ public class ApplicationControllerIntegrationTest {
         when(applicationService.getApplicationsByJob(eq("jobId123"), any(Pageable.class)))
                 .thenReturn(applicationPage);
 
+        // Create a response structure that matches what the controller produces
+        Map<String, Object> expectedResponse = new HashMap<>();
+        expectedResponse.put("applications", applications);
+        expectedResponse.put("currentPage", 0);
+        expectedResponse.put("totalItems", 1L);
+        expectedResponse.put("totalPages", 1);
+
         mockMvc.perform(get("/api/applications/job/jobId123"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.applications", hasSize(1)))
                 .andExpect(jsonPath("$.applications[0].id", is("appId123")))
                 .andExpect(jsonPath("$.applications[0].jobId", is("jobId123")))
@@ -273,13 +230,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests updating an application's status.
-     * <p>
-     * This test verifies that recruiters can update the status of job applications
-     * (e.g., to "REVIEWING", "SHORTLISTED", "ACCEPTED", or "REJECTED") and add
-     * review notes. It checks that the response contains the updated application details.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "RECRUITER")
@@ -303,7 +253,9 @@ public class ApplicationControllerIntegrationTest {
         mockMvc.perform(put("/api/applications/appId123/status")
                         .param("status", "REVIEWING")
                         .param("reviewNotes", "Good candidate, proceed to interview"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is("appId123")))
                 .andExpect(jsonPath("$.status", is("REVIEWING")))
                 .andExpect(jsonPath("$.reviewNotes", is("Good candidate, proceed to interview")));
@@ -314,13 +266,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests adding review notes to an application.
-     * <p>
-     * This test verifies that recruiters can add or update review notes for
-     * job applications without changing their status. It checks that the response
-     * contains the updated application with the new review notes.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "RECRUITER")
@@ -340,7 +285,9 @@ public class ApplicationControllerIntegrationTest {
 
         mockMvc.perform(put("/api/applications/appId123/review")
                         .param("reviewNotes", "Impressive technical skills"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is("appId123")))
                 .andExpect(jsonPath("$.reviewNotes", is("Impressive technical skills")));
 
@@ -350,13 +297,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests adding interview notes to an application.
-     * <p>
-     * This test verifies that recruiters can add or update interview notes for
-     * job applications that have reached the interview stage. It checks that the
-     * response contains the updated application with the new interview notes.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "RECRUITER")
@@ -377,7 +317,9 @@ public class ApplicationControllerIntegrationTest {
 
         mockMvc.perform(put("/api/applications/appId123/interview")
                         .param("interviewNotes", "Good communication skills, technically strong"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is("appId123")))
                 .andExpect(jsonPath("$.interviewNotes", is("Good communication skills, technically strong")));
 
@@ -387,13 +329,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests withdrawing (deleting) a job application.
-     * <p>
-     * This test verifies that candidates can withdraw their job applications,
-     * effectively removing them from the system. It checks that the response
-     * includes a success message after a successful withdrawal.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "CANDIDATE")
@@ -402,7 +337,9 @@ public class ApplicationControllerIntegrationTest {
                 .thenReturn(true);
 
         mockMvc.perform(delete("/api/applications/appId123"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", containsString("withdrawn successfully")));
 
@@ -411,13 +348,6 @@ public class ApplicationControllerIntegrationTest {
 
     /**
      * Tests retrieving application statistics for a job.
-     * <p>
-     * This test verifies that recruiters can retrieve statistics about applications
-     * for a specific job, including counts of applications in various statuses.
-     * It checks that the response contains all the expected statistical metrics.
-     * </p>
-     *
-     * @throws Exception if an error occurs during the test
      */
     @Test
     @WithMockUser(roles = "RECRUITER")
@@ -434,7 +364,9 @@ public class ApplicationControllerIntegrationTest {
                 .thenReturn(stats);
 
         mockMvc.perform(get("/api/applications/stats/job/jobId123"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.total", is(10)))
                 .andExpect(jsonPath("$.applied", is(5)))
                 .andExpect(jsonPath("$.reviewing", is(3)))

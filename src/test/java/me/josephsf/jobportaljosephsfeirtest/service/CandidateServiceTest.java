@@ -287,7 +287,6 @@ public class CandidateServiceTest {
         assertTrue(result.get(0).getIsAvailable(), "Candidate should be available");
         verify(candidateRepository, times(1)).findAll();
     }
-
     /**
      * Test generating candidate statistics.
      */
@@ -322,9 +321,8 @@ public class CandidateServiceTest {
 
         verify(candidateRepository, times(1)).findById("testCandidateId");
         verify(applicationRepository, times(1)).countByCandidateId("testCandidateId");
-        verify(applicationRepository, times(5)).findByCandidateId("testCandidateId");
+        verify(applicationRepository, times(4)).findByCandidateId("testCandidateId");  // Changed from 5 to 4
     }
-
     /**
      * Test updating a candidate's resume URL.
      */

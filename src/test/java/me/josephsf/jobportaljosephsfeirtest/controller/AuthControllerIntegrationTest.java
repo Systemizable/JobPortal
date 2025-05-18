@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(classes = me.josephsf.jobportaljosephsfeir.JobPortalJosephSfeirApplication.class)
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "spring.data.mongodb.uri=mongodb+srv://JosephSfeir:Sfeir7705@job-portal-cluster.uihqk1x.mongodb.net/test_db?retryWrites=true&w=majority"

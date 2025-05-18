@@ -22,11 +22,7 @@ configurations {
 repositories {
     mavenCentral()
 }
-tasks.withType<Test> {
-    useJUnitPlatform()
-    // Set system properties for tests if needed
-    systemProperty("spring.profiles.active", "test")
-}
+
 dependencies {
     // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
@@ -38,6 +34,9 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     implementation("io.jsonwebtoken:jjwt-impl:0.11.5")
     implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
+
+    // Jackson JSR310 support for Java 8 date/time types
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     // Development tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")

@@ -4,6 +4,7 @@ import me.josephsf.jobportaljosephsfeir.security.JwtAuthTokenFilter;
 import me.josephsf.jobportaljosephsfeir.security.UserDetailsServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -126,13 +127,13 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        // Static resources - must be first
+                        // Static resources
                         .requestMatchers("/", "/index.html", "/candidate-dashboard.html", "/recruiter-dashboard.html").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
 
-                        // API endpoints
+                        // API endpoints open to all (only GET requests to /api/jobs)
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/jobs", "/api/jobs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/jobs/**").permitAll()  // allow GETs only
 
                         // Health check endpoint
                         .requestMatchers("/actuator/health").permitAll()

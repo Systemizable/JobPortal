@@ -1,6 +1,8 @@
 package me.josephsf.jobportaljosephsfeirtest.controller;
 
+import me.josephsf.jobportaljosephsfeir.JobPortalJosephSfeirApplication;
 import me.josephsf.jobportaljosephsfeir.controller.CandidateController;
+import me.josephsf.jobportaljosephsfeir.controller.JobController;
 import me.josephsf.jobportaljosephsfeir.dto.CandidateDto;
 import me.josephsf.jobportaljosephsfeir.dto.ApiResponseDto;
 import me.josephsf.jobportaljosephsfeir.model.Candidate;
@@ -10,14 +12,18 @@ import me.josephsf.jobportaljosephsfeir.security.JwtAuthTokenFilter;
 import me.josephsf.jobportaljosephsfeir.security.JwtUtils;
 import me.josephsf.jobportaljosephsfeir.security.UserDetailsServiceImpl;
 import me.josephsf.jobportaljosephsfeir.service.CandidateService;
+import me.josephsf.jobportaljosephsfeirtest.config.TestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +50,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @since 2025-05-17
  */
 @WebMvcTest(CandidateController.class)
-@ActiveProfiles("test")
+@ContextConfiguration(classes = {JobPortalJosephSfeirApplication.class})
+@Import(TestConfig.class)
+@AutoConfigureMockMvc(addFilters = false)
+
 public class CandidateControllerIntegrationTest {
 
     @Autowired

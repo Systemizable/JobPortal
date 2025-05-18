@@ -1,5 +1,6 @@
 package me.josephsf.jobportaljosephsfeirtest.repository;
 
+import me.josephsf.jobportaljosephsfeir.JobPortalJosephSfeirApplication;
 import me.josephsf.jobportaljosephsfeir.model.Job;
 import me.josephsf.jobportaljosephsfeir.repository.JobRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -11,10 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @since 2025-05-17
  */
 @DataMongoTest
+@ContextConfiguration(classes = JobPortalJosephSfeirApplication.class)
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "spring.mongodb.embedded.version=4.0.21",
